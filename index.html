@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Site interativo para aprender estruturas condicionais (if, elif, else) em Python. Feito especialmente para alunos do Ensino Médio de Lógica de Programação.">
+  <title>Condicionais 101 - Lógica de Programação e Python</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- CABEÇALHO E NAVEGAÇÃO -->
+  <header>
+    <div class="header-container">
+      <div class="logo-section">
+        <h1>🐍 Condicionais <span>101</span></h1>
+        <p>Lógica de Programação &amp; Linguagem Python</p>
+      </div>
+      
+      <nav>
+        <button class="tab-btn active" data-tab="home" id="tab-nav-home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Início
+        </button>
+        <button class="tab-btn" data-tab="theory" id="tab-nav-theory">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          Teoria
+        </button>
+        <button class="tab-btn" data-tab="simulator" id="tab-nav-simulator">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Simulador
+        </button>
+        <button class="tab-btn" data-tab="quiz" id="tab-nav-quiz">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Quiz
+        </button>
+        <button class="tab-btn" data-tab="challenges" id="tab-nav-challenges">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          Desafios
+        </button>
+        <button class="tab-btn" data-tab="report" id="tab-nav-report">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Relatório
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main>
+    
+    <!-- ABA 1: INÍCIO / VISÃO GERAL -->
+    <section id="home-tab" class="tab-content active">
+      <div class="welcome-grid">
+        <div class="card welcome-box">
+          <h2>Olá, programador! 👋</h2>
+          <p class="intro-text">
+            Seja bem-vindo ao seu guia prático de <strong>estruturas condicionais em Python</strong>. 
+            Aqui você vai entender como fazer o computador tomar decisões com os comandos <code>if</code>, <code>elif</code> e <code>else</code>.
+          </p>
+          
+          <div style="margin-top: 2rem;">
+            <h3 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.75rem;">Como usar este site?</h3>
+            <ul style="margin-left: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; color: #334155;">
+              <li>📖 Leia a <strong>Teoria</strong> para entender os conceitos de forma visual e com fluxogramas rápidos.</li>
+              <li>⚡ Experimente o <strong>Simulador</strong> para ver na prática o fluxo de execução mudando em tempo real.</li>
+              <li>🧠 Teste seus conhecimentos teóricos respondendo ao nosso <strong>Quiz</strong> interativo.</li>
+              <li>💻 Complete os <strong>Desafios de Código</strong> e ganhe suas medalhas resolvendo problemas de programação reais.</li>
+            </ul>
+          </div>
+          
+          <div style="margin-top: 2rem;">
+            <button onclick="switchTab('theory')" class="primary-btn" id="start-learning-btn">Começar a Aprender ➔</button>
+          </div>
+        </div>
+        
+        <div class="stats-card">
+          <div class="stats-header">Seu Progresso de Estudos</div>
+          
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">
+              <span>Trilha Completa</span>
+              <span id="progress-percent-text">0% concluído</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-fill" id="total-progress-fill"></div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 1.5rem;">
+            <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-light); margin-bottom: 0.5rem;">Status dos Desafios:</div>
+            <div class="level-badge-container">
+              <div class="level-badge" id="badge-lvl-1" onclick="switchTab('challenges'); selectChallenge(1);">1</div>
+              <div class="level-badge" id="badge-lvl-2" onclick="switchTab('challenges'); selectChallenge(2);">2</div>
+              <div class="level-badge" id="badge-lvl-3" onclick="switchTab('challenges'); selectChallenge(3);">3</div>
+              <div class="level-badge" id="badge-lvl-4" onclick="switchTab('challenges'); selectChallenge(4);">4</div>
+              <div class="level-badge" id="badge-lvl-5" onclick="switchTab('challenges'); selectChallenge(5);">5</div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <button onclick="resetProgress()" class="btn-secondary" style="width: 100%; font-size: 0.85rem; color: var(--color-error); border-color: #FECDD3;" id="reset-progress-btn">
+              Resetar Progresso ⚡
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Banner Final de Conclusão -->
+      <div id="final-achievement-banner" class="achievement-banner" style="display: none; margin-top: 2rem;">
+        <span class="achievement-icon">🏆</span>
+        <div class="achievement-text">
+          <h3>Incrível! Trilha 100% Concluída!</h3>
+          <p>Você dominou os conceitos de if, elif e else e completou com sucesso todos os desafios propostos para a aula. Parabéns pela dedicação!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 2: TEORIA -->
+    <section id="theory-tab" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">📖 Guia de Teoria Interativa</h2>
+        <p style="color: var(--text-light); margin-bottom: 2rem;" id="theory-intro-text">
+          Imagine que você está programando um jogo de corrida. Se o carro passar pela linha de chegada, o jogo deve parar e mostrar 'Você venceu!'. Caso contrário, o carro continua correndo. Essa tomada de decisão no código é feita usando estruturas condicionais.
+        </p>
+        
+        <div class="theory-nav">
+          <button class="theory-tab-btn active" data-concept="if" id="theory-btn-if">O comando IF (Se)</button>
+          <button class="theory-tab-btn" data-concept="else" id="theory-btn-else">O comando ELSE (Senão)</button>
+          <button class="theory-tab-btn" data-concept="elif" id="theory-btn-elif">O comando ELIF (Senão Se)</button>
+          <button class="theory-tab-btn" data-concept="operators" id="theory-btn-operators">Valores e Operadores Lógicos</button>
+        </div>
+        
+        <div class="theory-grid">
+          <!-- Textos explicativos -->
+          <div>
+            <!-- Conteúdo IF -->
+            <div id="theory-content-if" class="theory-body-content active">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">1. O comando 'if' (Se)</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                O <code>if</code> é o ponto de partida. Ele testa uma condição. Se essa condição for <strong>verdadeira (True)</strong>, o bloco de código que está recuado (indentado) logo abaixo dele é executado.
+              </p>
+              <p class="code-snippet" style="margin-bottom: 1rem;">energia = 80
+
+if energia > 50:
+    print("O personagem pode correr!")</p>
+              <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+                <strong>Analogia:</strong> Se estiver chovendo, eu abro o guarda-chuva.
+              </div>
+            </div>
+            
+            <!-- Conteúdo ELSE -->
+            <div id="theory-content-else" class="theory-body-content">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">2. O comando 'else' (Senão)</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                O <code>else</code> serve para quando a condição do <code>if</code> for <strong>falsa (False)</strong>. Ele é o plano B: se a primeira condição não deu certo, o código entra obrigatoriamente no <code>else</code>.
+              </p>
+              <p class="code-snippet" style="margin-bottom: 1rem;">temperatura = 15
+
+if temperatura > 25:
+    print("Está calor.")
+else:
+    print("Está frio ou fresco.")</p>
+              <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+                <strong>Analogia:</strong> Se fizer sol, vou à praia. Senão, fico em casa jogando videogame.
+              </div>
+            </div>
+            
+            <!-- Conteúdo ELIF -->
+            <div id="theory-content-elif" class="theory-body-content">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">3. O comando 'elif' (Senão Se)</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                E se você tiver mais de duas opções? O <code>elif</code> (abreviação de <em>else if</em>) permite testar condições extras em ordem. O Python vai testando uma por uma até achar uma verdadeira. Se nenhuma for verdadeira, ele executa o <code>else</code> no final.
+              </p>
+              <p class="code-snippet" style="margin-bottom: 1rem;">nota = 8.5
+
+if nota >= 9.0:
+    print("Excelente!")
+elif nota >= 7.0:
+    print("Muito bom!")
+else:
+    print("Precisa estudar mais!")</p>
+              <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+                <strong>Analogia:</strong> Se eu tiver R$ 20, compro pizza. Senão, se eu tiver R$ 10, compro um pastel. Senão, como pão com queijo.
+              </div>
+            </div>
+
+            <!-- Conteúdo OPERADORES E BOOLEANOS -->
+            <div id="theory-content-operators" class="theory-body-content">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">4. Valores Booleanos e Operadores Lógicos</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                Além de comparar números, as condições avaliam em valores booleanos (lógicos): <code>True</code> (Verdadeiro) ou <code>False</code> (Falso).
+                Podemos combinar múltiplas condições no mesmo <code>if</code> usando <strong>operadores lógicos</strong>:
+              </p>
+              <ul style="margin-left: 1.5rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; color: #334155;">
+                <li><code>and</code> (E): Exige que <strong>todas</strong> as condições sejam verdadeiras.</li>
+                <li><code>or</code> (OU): Exige que <strong>pelo menos uma</strong> condição seja verdadeira.</li>
+                <li><code>not</code> (NÃO): Inverte o valor lógico (ex: <code>not True</code> vira <code>False</code>).</li>
+              </ul>
+              <p class="code-snippet" style="margin-bottom: 1rem;"># Exemplo de condição composta
+tem_ingresso = True
+idade = 17
+
+if tem_ingresso and idade >= 16:
+    print("Acesso liberado!")</p>
+              <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+                <strong>Analogia:</strong> Vou à praia se fizer sol <em>E</em> eu tiver dinheiro. Vou de ônibus se estiver chovendo <em>OU</em> se eu estiver cansado.
+              </div>
+            </div>
+            
+            <div style="margin-top: 1.5rem; background-color: var(--color-warning-bg); color: #92400E; padding: 1rem; border-radius: var(--border-radius-sm); font-size: 0.9rem; border-left: 4px solid var(--color-warning);">
+              <strong>⚠️ Regra de Ouro do Python: Indentação!</strong><br>No Python, os blocos de código pertencentes ao <code>if</code>, <code>elif</code> e <code>else</code> devem estar <strong>afastados da margem esquerda</strong> (geralmente por 4 espaços ou 1 tab). Isso mostra ao Python o que está "dentro" da condição.
+            </div>
+          </div>
+          
+          <!-- Fluxograma interativo lateral -->
+          <div class="flowchart-card">
+            <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 1rem; font-size: 1.1rem; text-align: center;">Fluxo de Decisão Visual</h4>
+            <div id="theory-flowchart-area" style="width: 100%;">
+              <!-- Inserido dinamicamente via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 3: SIMULADOR DE FLUXO -->
+    <section id="simulator-tab" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">⚡ Simulador de Execução Passo a Passo</h2>
+        <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+          Mova os controles deslizantes para alterar o valor da nota. Observe em tempo real qual linha do código em Python é executada (iluminada em verde) e o que é impresso no console.
+        </p>
+        
+        <div class="simulator-layout">
+          <!-- Controles do Simulador -->
+          <div class="controls-card">
+            <div class="control-item">
+              <label for="sim-slider-nota">Alterar a Nota do Aluno:</label>
+              <div class="control-slider-container">
+                <input type="range" id="sim-slider-nota" class="control-slider" min="0" max="10" step="0.5" value="7.5">
+                <span class="control-value" id="sim-val-nota">7.5</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem;">
+                Nota &gt;= 9.0 (Excelente) | Nota &gt;= 7.0 (Muito bom) | Nota &lt; 7.0 (Estudar mais)
+              </p>
+            </div>
+            
+            <div style="background-color: var(--accent-teal-light); color: var(--accent-teal-hover); padding: 1rem; border-radius: var(--border-radius-sm); font-size: 0.9rem;">
+              <strong>💡 O que observar?</strong><br>
+              Perceba que quando a nota é maior que 9.0, a condição do <code>if</code> é satisfeita, então ele <strong>ignora</strong> as condições do <code>elif</code> e do <code>else</code> inteiramente. Se a nota for menor que 7.0, ele avalia as duas condições falsas e entra obrigatoriamente no <code>else</code>.
+            </div>
+          </div>
+          
+          <!-- Visualizador do Código e Console -->
+          <div class="sim-code-card">
+            <div class="sim-code-editor">
+              <div class="sim-line" id="sim-line-1">nota = <span style="color: #38BDF8;" id="sim-code-val">7.5</span></div>
+              <div class="sim-line" id="sim-line-2"></div>
+              <div class="sim-line" id="sim-line-3"><span style="color: #F43F5E;">if</span> nota &gt;= <span style="color: #F59E0B;">9.0</span>:</div>
+              <div class="sim-line" id="sim-line-4">    <span style="color: #A855F7;">print</span>(<span style="color: #10B981;">"Excelente!"</span>)</div>
+              <div class="sim-line" id="sim-line-5"><span style="color: #F43F5E;">elif</span> nota &gt;= <span style="color: #F59E0B;">7.0</span>:</div>
+              <div class="sim-line" id="sim-line-6">    <span style="color: #A855F7;">print</span>(<span style="color: #10B981;">"Muito bom!"</span>)</div>
+              <div class="sim-line" id="sim-line-7"><span style="color: #F43F5E;">else</span>:</div>
+              <div class="sim-line" id="sim-line-8">    <span style="color: #A855F7;">print</span>(<span style="color: #10B981;">"Precisa estudar mais!"</span>)</div>
+            </div>
+            
+            <div class="sim-console">
+              <div id="sim-console-output" style="color: #E2E8F0; font-weight: 500;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 4: QUIZ -->
+    <section id="quiz-tab" class="tab-content">
+      <div class="card" id="quiz-card-wrapper" style="max-width: 800px; margin: 0 auto;">
+        <h2 class="card-title">🧠 Quiz Rápido de Lógica</h2>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">
+          Responda a estas 5 perguntas para consolidar sua leitura teórica sobre fluxos condicionais.
+        </p>
+        
+        <div id="quiz-container">
+          <!-- Inserido dinamicamente via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 5: DESAFIOS DE CÓDIGO -->
+    <section id="challenges-tab" class="tab-content">
+      <div class="challenges-grid">
+        
+        <!-- Lista de Desafios lateral -->
+        <div class="challenge-list">
+          <div class="challenge-list-title">Níveis de Prática</div>
+          <div id="challenge-list-container">
+            <!-- Gerado via JS -->
+          </div>
+        </div>
+        
+        <!-- Editor de Código Principal -->
+        <div class="card workspace-card" style="padding: 1.5rem;">
+          
+          <div class="challenge-desc">
+            <h3 id="chal-title">Nível 1: Recorde de Pontos 🏆</h3>
+            <p id="chal-description">Carregando...</p>
+          </div>
+          
+          <div>
+            <div class="editor-header">
+              <span>Editor de Código Python</span>
+              <span class="lang">python 3</span>
+            </div>
+            <div class="editor-container">
+              <textarea id="chal-code-editor" class="code-textarea" spellcheck="false" oninput="onCodeEditorInput(this.value)"></textarea>
+            </div>
+            
+            <div class="editor-toolbar">
+              <button onclick="resetChallengeCode()" class="btn-secondary" id="editor-reset-btn">Resetar Código 🔄</button>
+              <button onclick="runAndValidateCode()" class="primary-btn" id="editor-run-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Executar Código (Validar)
+              </button>
+            </div>
+          </div>
+          
+          <!-- Painel de Resultados do Validador -->
+          <div id="chal-results-panel" class="results-panel">
+            <!-- Inserido dinamicamente via JS -->
+          </div>
+          
+        </div>
+        
+      </div>
+    </section>
+
+    <!-- ABA 6: RELATÓRIO DE DESEMPENHO -->
+    <section id="report-tab" class="tab-content">
+      <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div id="report-form-area" style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+          <h2 class="card-title">📝 Relatório de Desempenho Escolar</h2>
+          <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+            Digite o nome completo do aluno abaixo para carregar as estatísticas de estudo, nota média e o diagnóstico de pontos fortes, fracos e sugestões de prática.
+          </p>
+          <div style="display: flex; gap: 1rem; align-items: center; max-width: 500px; flex-wrap: wrap;">
+            <label for="student-name-input" style="font-weight: 600; color: var(--primary-navy); min-width: 120px;">Nome do Aluno:</label>
+            <input type="text" id="student-name-input" placeholder="Ex: Maria Eduarda Silva" style="flex-grow: 1; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); outline: none; font-size: 1rem;" oninput="updateStudentName(this.value)">
+          </div>
+        </div>
+        
+        <div id="report-output-area">
+          <!-- Gerado dinamicamente via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- RODAPÉ -->
+  <footer style="text-align: center; padding: 2rem; color: var(--text-light); border-top: 1px solid var(--border-color); background-color: var(--bg-card); margin-top: 4rem;">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <p>&copy; 2026 - Lógica de Programação | 1º Ano do Ensino Médio</p>
+      <p style="font-size: 0.85rem;">Desenvolvido com ❤️ para a turma de programação.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts locais -->
+  <script src="data.js"></script>
+  <script src="interpreter.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
