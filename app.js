@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSimulator();
   setupQuiz();
   setupChallenges();
+  setupExam();
   updateProgressUI();
 });
 
@@ -48,7 +49,14 @@ function loadProgress() {
         completedLevels: parsed.completedLevels || [],
         studentName: parsed.studentName || "",
         quizAttempts: parsed.quizAttempts || 0,
-        challengeAttempts: parsed.challengeAttempts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        challengeAttempts: parsed.challengeAttempts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        // Propriedades da Avaliação 1
+        examUnlocked: parsed.examUnlocked || false,
+        examName1: parsed.examName1 || "",
+        examName2: parsed.examName2 || "",
+        examSubmitted: parsed.examSubmitted || false,
+        examCodes: parsed.examCodes || {},
+        examResults: parsed.examResults || {}
       };
     } catch (e) {
       console.error("Erro ao ler progresso do localStorage", e);
@@ -61,7 +69,14 @@ function loadProgress() {
       completedLevels: [],
       studentName: "",
       quizAttempts: 0,
-      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      // Propriedades da Avaliação 1
+      examUnlocked: false,
+      examName1: "",
+      examName2: "",
+      examSubmitted: false,
+      examCodes: {},
+      examResults: {}
     };
   }
 }
@@ -80,7 +95,13 @@ function resetProgress() {
       completedLevels: [],
       studentName: "",
       quizAttempts: 0,
-      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      examUnlocked: false,
+      examName1: "",
+      examName2: "",
+      examSubmitted: false,
+      examCodes: {},
+      examResults: {}
     };
     saveProgress();
     // Reinicia estados locais
@@ -92,6 +113,7 @@ function resetProgress() {
     // Atualiza UIs
     setupQuiz();
     setupChallenges();
+    setupExam();
     const nameInput = document.getElementById('student-name-input');
     if (nameInput) nameInput.value = "";
     renderPerformanceReport();
@@ -195,6 +217,8 @@ function switchTab(tabId) {
     loadChallenge(STATE.challenges.currentLevel);
   } else if (tabId === 'report') {
     renderPerformanceReport();
+  } else if (tabId === 'exam') {
+    refreshExamUI();
   }
 }
 
@@ -692,6 +716,9 @@ function setupChallenges() {
   
   // Carrega o desafio inicial
   loadChallenge(STATE.challenges.currentLevel);
+
+  // Habilita inserção de Tab como 4 espaços
+  enableTabKeyPress('chal-code-editor', onCodeEditorInput);
 }
 
 function selectChallenge(level) {
@@ -733,6 +760,12 @@ function loadChallenge(level) {
       editor.value = STATE.challenges.userCodes[level];
     } else {
       editor.value = ex.starterCode;
+    }
+    
+    // Atualiza destaque
+    const pre = editor.nextElementSibling;
+    if (pre) {
+      updateEditorHighlight(editor, pre);
     }
   }
   
@@ -1146,3 +1179,755 @@ function renderPerformanceReport() {
   `;
 }
 window.renderPerformanceReport = renderPerformanceReport;
+
+// --- SEÇÃO DE AVALIAÇÃO 1 ---
+// Configuração do EmailJS para envio automático silencioso
+const EMAILJS_CONFIG = {
+  serviceId: "service_9u2sac8",
+  templateId: "template_yew74so", // ID do modelo criado no painel do EmailJS
+  publicKey: "krM3uc38ucTfqux-q"   // Chave Pública (Public Key) no painel do EmailJS
+};
+
+STATE.exam = {
+  activeQ: 1
+};
+
+function setupExam() {
+  const listContainer = document.getElementById('exam-list-container');
+  if (!listContainer) return;
+  
+  // Limpa e gera lista lateral de questões
+  let html = "";
+  SITE_DATA.exam.forEach(q => {
+    const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
+    const completedClass = isCompleted ? 'completed' : '';
+    const activeClass = q.id === STATE.exam.activeQ ? 'active' : '';
+    
+    html += `
+      <button class="challenge-item ${activeClass} ${completedClass}" id="exam-item-${q.id}" onclick="selectExamQuestion(${q.id})">
+        Questão ${q.id}: ${q.name.split(':')[1].trim()}
+      </button>
+    `;
+  });
+  listContainer.innerHTML = html;
+  
+  // Carrega os nomes se já estiverem salvos
+  const nameInput1 = document.getElementById('exam-student-name-1');
+  const nameInput2 = document.getElementById('exam-student-name-2');
+  if (nameInput1) nameInput1.value = STATE.progress.examName1 || "";
+  if (nameInput2) nameInput2.value = STATE.progress.examName2 || "";
+
+  // Habilita inserção de Tab como 4 espaços
+  enableTabKeyPress('exam-code-editor', onExamCodeInput);
+}
+
+function unlockExam() {
+  const pwdInput = document.getElementById('exam-password-input');
+  const errorDiv = document.getElementById('exam-auth-error');
+  
+  if (!pwdInput) return;
+  
+  const enteredPassword = pwdInput.value.trim();
+  
+  // Senha definida: "ecs101" ou "aula101"
+  if (enteredPassword === 'ecs101' || enteredPassword === 'aula101') {
+    STATE.progress.examUnlocked = true;
+    if (errorDiv) errorDiv.style.display = 'none';
+    saveProgress();
+    refreshExamUI();
+  } else {
+    if (errorDiv) errorDiv.style.display = 'block';
+    pwdInput.value = "";
+    pwdInput.focus();
+  }
+}
+
+function refreshExamUI() {
+  const authCard = document.getElementById('exam-auth-card');
+  const contentCard = document.getElementById('exam-content-card');
+  const successCard = document.getElementById('exam-success-card');
+  const questionsArea = document.getElementById('exam-questions-area');
+  const nameInput1 = document.getElementById('exam-student-name-1');
+  const nameInput2 = document.getElementById('exam-student-name-2');
+  
+  if (!authCard || !contentCard) return;
+  
+  // Se o aluno já concluiu/enviou a avaliação, pula direto para a tela de sucesso
+  if (STATE.progress.examSubmitted) {
+    authCard.style.display = 'none';
+    contentCard.style.display = 'none';
+    if (successCard) successCard.style.display = 'block';
+    
+    const textarea = document.getElementById('exam-report-text-copy');
+    if (textarea) textarea.value = generateExamReportText();
+    return;
+  }
+  
+  if (STATE.progress.examUnlocked) {
+    authCard.style.display = 'none';
+    contentCard.style.display = 'block';
+    if (successCard) successCard.style.display = 'none';
+    
+    const name1 = STATE.progress.examName1 || "";
+    const name2 = STATE.progress.examName2 || "";
+    if (nameInput1) nameInput1.value = name1;
+    if (nameInput2) nameInput2.value = name2;
+    
+    if (name1.trim().length > 2) {
+      if (questionsArea) questionsArea.style.display = 'block';
+      loadExamQuestion(STATE.exam.activeQ);
+    } else {
+      if (questionsArea) questionsArea.style.display = 'none';
+    }
+  } else {
+    authCard.style.display = 'block';
+    contentCard.style.display = 'none';
+    if (successCard) successCard.style.display = 'none';
+  }
+}
+
+function onExamNameChange() {
+  const name1 = document.getElementById('exam-student-name-1').value;
+  const name2 = document.getElementById('exam-student-name-2').value;
+  
+  STATE.progress.examName1 = name1;
+  STATE.progress.examName2 = name2;
+  saveProgress();
+  
+  const questionsArea = document.getElementById('exam-questions-area');
+  if (name1.trim().length > 2) {
+    if (questionsArea) questionsArea.style.display = 'block';
+    loadExamQuestion(STATE.exam.activeQ);
+  } else {
+    if (questionsArea) questionsArea.style.display = 'none';
+  }
+}
+
+function selectExamQuestion(qId) {
+  STATE.exam.activeQ = qId;
+  
+  // Atualiza botões laterais
+  document.querySelectorAll('#exam-list-container .challenge-item').forEach(btn => {
+    const btnId = parseInt(btn.id.replace('exam-item-', ''));
+    btn.classList.remove('active');
+    if (btnId === qId) {
+      btn.classList.add('active');
+    }
+  });
+  
+  loadExamQuestion(qId);
+}
+
+function loadExamQuestion(qId) {
+  const q = SITE_DATA.exam.find(item => item.id === qId);
+  if (!q) return;
+  
+  const qTitle = document.getElementById('exam-q-title');
+  const qDesc = document.getElementById('exam-q-description');
+  const editor = document.getElementById('exam-code-editor');
+  const resultsPanel = document.getElementById('exam-results-panel');
+  
+  if (qTitle && qDesc && editor) {
+    qTitle.innerHTML = q.name;
+    qDesc.innerHTML = q.description;
+    
+    // Carrega o código do estado ou inicial
+    if (STATE.progress.examCodes && STATE.progress.examCodes[qId] !== undefined) {
+      editor.value = STATE.progress.examCodes[qId];
+    } else {
+      editor.value = q.starterCode;
+    }
+    
+    // Atualiza destaque
+    const pre = editor.nextElementSibling;
+    if (pre) {
+      updateEditorHighlight(editor, pre);
+    }
+  }
+  
+  if (resultsPanel) {
+    resultsPanel.classList.remove('visible');
+  }
+}
+
+function onExamCodeInput(code) {
+  if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
+  STATE.progress.examCodes[STATE.exam.activeQ] = code;
+  saveProgress();
+}
+
+function resetExamCode() {
+  const qId = STATE.exam.activeQ;
+  const q = SITE_DATA.exam.find(item => item.id === qId);
+  
+  if (q && confirm("Deseja voltar o código desta questão para o estado original?")) {
+    const editor = document.getElementById('exam-code-editor');
+    if (editor) editor.value = q.starterCode;
+    
+    if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
+    STATE.progress.examCodes[qId] = q.starterCode;
+    
+    if (STATE.progress.examResults) {
+      delete STATE.progress.examResults[qId];
+    }
+    
+    saveProgress();
+    
+    const btn = document.getElementById(`exam-item-${qId}`);
+    if (btn) btn.classList.remove('completed');
+    
+    const resultsPanel = document.getElementById('exam-results-panel');
+    if (resultsPanel) resultsPanel.classList.remove('visible');
+  }
+}
+
+function runAndValidateExamCode() {
+  const qId = STATE.exam.activeQ;
+  const q = SITE_DATA.exam.find(item => item.id === qId);
+  const editor = document.getElementById('exam-code-editor');
+  
+  if (!q || !editor) return;
+  
+  const code = editor.value;
+  if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
+  STATE.progress.examCodes[qId] = code;
+  
+  const resultsPanel = document.getElementById('exam-results-panel');
+  if (!resultsPanel) return;
+  
+  resultsPanel.classList.add('visible');
+  resultsPanel.innerHTML = "";
+  
+  let allPass = true;
+  let testCaseResults = [];
+  let compileError = null;
+  
+  for (let test of q.testCases) {
+    const result = runPython(code, test.setupVariables);
+    
+    if (!result.success) {
+      compileError = result.error;
+      allPass = false;
+      break;
+    }
+    
+    const actual = result.output.trim();
+    const expected = test.expectedOutput.trim();
+    const isPass = actual === expected;
+    
+    if (!isPass) {
+      allPass = false;
+    }
+    
+    testCaseResults.push({
+      label: test.label,
+      setup: test.setupVariables,
+      expected: expected,
+      actual: actual,
+      pass: isPass
+    });
+  }
+  
+  if (compileError) {
+    resultsPanel.innerHTML = `
+      <div class="results-header" style="color: var(--color-error)">
+        ⚠️ Erro Encontrado no Código:
+      </div>
+      <div class="compiler-error-box">${compileError}</div>
+      <p style="font-size: 0.9rem; color: var(--text-light);">
+        Revise seu código, corrija as regras de indentação do Python e tente novamente.
+      </p>
+    `;
+    return;
+  }
+  
+  let headerColor = allPass ? 'var(--color-success)' : 'var(--color-error)';
+  let headerText = allPass ? '🎉 Parabéns! Código validado com sucesso!' : '❌ Ops! Seu código falhou em alguns testes de validação.';
+  
+  let rowsHtml = testCaseResults.map((res, idx) => {
+    let rowClass = res.pass ? 'pass' : 'fail';
+    let indicatorClass = res.pass ? 'pass' : 'fail';
+    let indicatorText = res.pass ? 'SUCESSO' : 'FALHOU';
+    
+    let varsStr = Object.entries(res.setup).map(([k, v]) => `${k} = ${typeof v === 'string' ? `'${v}'` : (v === true ? 'True' : (v === false ? 'False' : v))}`).join(', ');
+    
+    return `
+      <div class="test-case-row ${rowClass}">
+        <div class="test-case-info">
+          <span class="status-indicator ${indicatorClass}">${indicatorText}</span>
+          <strong>${res.label}</strong> <span style="color: var(--text-light); font-size: 0.85rem;">(Entrada: ${varsStr})</span>
+        </div>
+        <button class="toggle-details-btn" onclick="toggleTestDetails(${idx})">Ver Detalhes</button>
+        
+        <div id="test-details-${idx}" class="test-case-details">
+          <div><strong>Saída Esperada:</strong></div>
+          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0;">${res.expected || '(Vazio)'}</pre>
+          <div><strong>Saída do Seu Código:</strong></div>
+          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0; color: ${res.pass ? 'green' : 'red'};">${res.actual || '(Vazio)'}</pre>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  resultsPanel.innerHTML = `
+    <div class="results-header" style="color: ${headerColor}">
+      ${headerText}
+    </div>
+    <div class="test-cases-summary">
+      ${rowsHtml}
+    </div>
+  `;
+  
+  // Atualiza resultados no estado
+  if (!STATE.progress.examResults) STATE.progress.examResults = {};
+  STATE.progress.examResults[qId] = allPass;
+  saveProgress();
+  
+  // Atualiza botão lateral
+  const btn = document.getElementById(`exam-item-${qId}`);
+  if (btn) {
+    if (allPass) {
+      btn.classList.add('completed');
+    } else {
+      btn.classList.remove('completed');
+    }
+  }
+}
+
+function openExamReview() {
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  
+  if (name1.length < 3) {
+    alert("Por favor, preencha o nome do Integrante 1 antes de revisar a avaliação!");
+    return;
+  }
+  
+  const modal = document.getElementById('exam-review-modal');
+  const infoDiv = document.getElementById('exam-review-student-info');
+  const listDiv = document.getElementById('exam-review-questions-list');
+  
+  if (!modal || !infoDiv || !listDiv) return;
+  
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
+  infoDiv.innerHTML = `
+    <div style="font-size: 1.1rem; color: var(--text-main);">
+      Integrantes: <strong style="color: var(--primary-navy);">${nameStr}</strong>
+    </div>
+    <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
+      Código de Acesso Utilizado: <code>${STATE.progress.examUnlocked ? 'ecs101' : 'Não autenticado'}</code>
+    </div>
+  `;
+  
+  let html = "";
+  SITE_DATA.exam.forEach(q => {
+    const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
+    const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
+    
+    let statusBadge = `<span class="status-indicator fail">FALHANDO OU NÃO TESTADO</span>`;
+    if (isCompleted) {
+      statusBadge = `<span class="status-indicator pass">VALIDADO COM SUCESSO (PASSOU NOS TESTES)</span>`;
+    }
+    
+    html += `
+      <div class="review-q-item">
+        <div class="review-q-header">
+          <span>${q.name}</span>
+          ${statusBadge}
+        </div>
+        <div class="review-q-body">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-light);">Código Desenvolvido:</div>
+          <pre class="review-q-code">${escapeHtml(code)}</pre>
+        </div>
+      </div>
+    `;
+  });
+  listDiv.innerHTML = html;
+  
+  // Adapta os botões de rodapé caso já tenha sido enviado (evita múltiplos envios de e-mail ao reabrir o relatório)
+  const submitBtn = modal.querySelector('.modal-footer .primary-btn');
+  const cancelBtn = modal.querySelector('.modal-footer .btn-secondary');
+  if (STATE.progress.examSubmitted) {
+    if (submitBtn) submitBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.innerText = 'Fechar';
+  } else {
+    if (submitBtn) submitBtn.style.display = 'flex';
+    if (cancelBtn) cancelBtn.innerText = 'Voltar à Prova';
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function closeExamReview() {
+  const modal = document.getElementById('exam-review-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function generateExamReportText() {
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " & " + name2;
+  if (!nameStr) nameStr = "Sem identificação";
+  
+  const date = new Date().toLocaleString('pt-BR');
+  
+  let report = `==================================================\n`;
+  report += `RELATÓRIO DE AVALIAÇÃO - CONDICIONAIS 101\n`;
+  report += `==================================================\n\n`;
+  report += `Alunos/Dupla: ${nameStr}\n`;
+  report += `Data de Entrega: ${date}\n`;
+  report += `Repositório: https://github.com/euclidespaim/ecs-101\n\n`;
+  
+  report += `--------------------------------------------------\n`;
+  report += `DESEMPENHO GERAL:\n`;
+  report += `--------------------------------------------------\n`;
+  
+  let totalCorrect = 0;
+  SITE_DATA.exam.forEach(q => {
+    const passed = STATE.progress.examResults && STATE.progress.examResults[q.id];
+    if (passed) totalCorrect++;
+  });
+  
+  report += `Questões Resolvidas: ${totalCorrect} de ${SITE_DATA.exam.length}\n`;
+  report += `Nota Estimada: ${(totalCorrect / SITE_DATA.exam.length * 10).toFixed(1)} / 10.0\n\n`;
+  
+  SITE_DATA.exam.forEach(q => {
+    const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
+    const passed = STATE.progress.examResults && STATE.progress.examResults[q.id] ? "PASSOU EM TODOS OS TESTES" : "NÃO PASSOU OU NÃO TESTADO";
+    
+    report += `==================================================\n`;
+    report += `${q.name}\n`;
+    report += `Status: ${passed}\n`;
+    report += `--------------------------------------------------\n`;
+    report += `CÓDIGO ENVIADO:\n`;
+    report += `--------------------------------------------------\n`;
+    report += `${code}\n`;
+    report += `==================================================\n\n`;
+  });
+  
+  return report;
+}
+
+function submitExamFinal() {
+  // Marca como submetido e salva
+  STATE.progress.examSubmitted = true;
+  saveProgress();
+  
+  const reportText = generateExamReportText();
+  
+  // Atualiza textarea da cópia
+  const textarea = document.getElementById('exam-report-text-copy');
+  if (textarea) textarea.value = reportText;
+  
+  // Fecha o modal de revisão
+  closeExamReview();
+  
+  // Mostra a tela de sucesso
+  const contentCard = document.getElementById('exam-content-card');
+  const successCard = document.getElementById('exam-success-card');
+  if (contentCard && successCard) {
+    contentCard.style.display = 'none';
+    successCard.style.display = 'block';
+  }
+
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
+  const subjectText = `Avaliação 1 - ${nameStr}`;
+
+  // Verifica se o EmailJS está configurado
+  if (EMAILJS_CONFIG.templateId && EMAILJS_CONFIG.templateId !== "YOUR_TEMPLATE_ID" &&
+      EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== "YOUR_PUBLIC_KEY") {
+    // Tenta envio automático silencioso em segundo plano
+    sendEmailViaEmailJS(subjectText, reportText, nameStr);
+  } else {
+    // Fallback: abre cliente de e-mail tradicional em nova guia
+    fallbackMailto(subjectText, reportText);
+  }
+}
+
+function retryMailtoSubmit() {
+  const reportText = generateExamReportText();
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
+  const subjectText = `Avaliação 1 - ${nameStr}`;
+  fallbackMailto(subjectText, reportText);
+}
+
+function sendEmailViaEmailJS(subject, reportText, nameStr) {
+  const payload = {
+    service_id: EMAILJS_CONFIG.serviceId,
+    template_id: EMAILJS_CONFIG.templateId,
+    user_id: EMAILJS_CONFIG.publicKey,
+    template_params: {
+      subject: subject,
+      from_name: nameStr,
+      message: reportText,
+      // Recipient Address variables to avoid "the recipients address is empty" error
+      to_email: "euclidespaim@gmail.com",
+      email: "euclidespaim@gmail.com",
+      from_email: "euclidespaim@gmail.com",
+      reply_to: "euclidespaim@gmail.com",
+      // Template placeholders from the user's template settings
+      name: nameStr,
+      title: subject
+    }
+  };
+
+  fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(response => {
+    if (response.ok) {
+      console.log('EMAILJS REST SUCCESS!');
+      alert("Avaliação enviada com sucesso ao e-mail do professor via EmailJS! 🎉");
+    } else {
+      return response.text().then(text => { throw new Error(text); });
+    }
+  })
+  .catch(error => {
+    console.error('EMAILJS REST FAILED...', error);
+    alert("Falha no envio automático via EmailJS. Abrindo cliente de e-mail local em nova guia como contingência...\nErro: " + error.message);
+    fallbackMailto(subject, reportText);
+  });
+}
+
+function fallbackMailto(subject, reportText) {
+  const emailRecipient = "euclidespaim@gmail.com";
+  const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportText)}`;
+  window.open(mailtoUrl, '_blank');
+}
+
+function copyExamReportToClipboard() {
+  const textarea = document.getElementById('exam-report-text-copy');
+  if (!textarea) return;
+  
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // Para mobile
+  
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    const copyBtn = document.getElementById('exam-copy-btn');
+    if (copyBtn) {
+      copyBtn.innerText = "Copiado! ✓";
+      copyBtn.style.backgroundColor = "var(--color-success-bg)";
+      copyBtn.style.color = "#065F46";
+      copyBtn.style.borderColor = "var(--color-success)";
+      
+      setTimeout(() => {
+        copyBtn.innerText = "Copiar Relatório 📋";
+        copyBtn.style.backgroundColor = "";
+        copyBtn.style.color = "";
+        copyBtn.style.borderColor = "";
+      }, 2500);
+    }
+  }).catch(err => {
+    alert("Falha ao copiar automaticamente: " + err);
+  });
+}
+
+function downloadExamReportAsTxt() {
+  const reportText = generateExamReportText();
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim().replace(/\s+/g, "_") : "avaliacao";
+  const name2 = STATE.progress.examName2 ? "_" + STATE.progress.examName2.trim().replace(/\s+/g, "_") : "";
+  const filename = `avaliacao_1_${name1}${name2}.txt`;
+  
+  const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Vincula funções do Exame ao escopo global (window)
+window.unlockExam = unlockExam;
+window.onExamNameChange = onExamNameChange;
+window.selectExamQuestion = selectExamQuestion;
+window.onExamCodeInput = onExamCodeInput;
+window.resetExamCode = resetExamCode;
+window.runAndValidateExamCode = runAndValidateExamCode;
+window.openExamReview = openExamReview;
+window.closeExamReview = closeExamReview;
+window.submitExamFinal = submitExamFinal;
+window.copyExamReportToClipboard = copyExamReportToClipboard;
+window.downloadExamReportAsTxt = downloadExamReportAsTxt;
+window.retryMailtoSubmit = retryMailtoSubmit;
+window.setupExam = setupExam;
+window.refreshExamUI = refreshExamUI;
+
+function resetSubmittedExam() {
+  const password = prompt("Digite a senha do professor para liberar uma nova tentativa de envio:");
+  if (password === 'ecs101' || password === 'aula101') {
+    STATE.progress.examSubmitted = false;
+    saveProgress();
+    alert("Avaliação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los.");
+    refreshExamUI();
+  } else if (password !== null) {
+    alert("Senha incorreta!");
+  }
+}
+window.resetSubmittedExam = resetSubmittedExam;
+
+function resetEntireExam() {
+  const password = prompt("Digite a senha do professor para RESETAR COMPLETAMENTE a avaliação (apaga nomes e códigos):");
+  if (password === 'ecs101' || password === 'aula101') {
+    STATE.progress.examUnlocked = false;
+    STATE.progress.examSubmitted = false;
+    STATE.progress.examName1 = "";
+    STATE.progress.examName2 = "";
+    STATE.progress.examCodes = {};
+    STATE.progress.examResults = {};
+    saveProgress();
+    
+    // Limpa campos na UI
+    const nameInput1 = document.getElementById('exam-student-name-1');
+    const nameInput2 = document.getElementById('exam-student-name-2');
+    if (nameInput1) nameInput1.value = "";
+    if (nameInput2) nameInput2.value = "";
+    
+    const pwdInput = document.getElementById('exam-password-input');
+    if (pwdInput) pwdInput.value = "";
+    
+    alert("Avaliação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados.");
+    refreshExamUI();
+  } else if (password !== null) {
+    alert("Senha incorreta!");
+  }
+}
+window.resetEntireExam = resetEntireExam;
+
+// --- SISTEMA DE DESTAQUE DE SINTAXE PYTHON (VS CODE STYLE) ---
+function highlightPython(code) {
+  let html = escapeHtml(code);
+  
+  // Tokenizer regex: separa strings, comentários, palavras (identificadores/números/keywords) e caracteres especiais
+  const tokenizer = /(&quot;.*?&quot;|&#039;.*?&#039;|#.*|[a-zA-Z_]\w*|\d+(?:\.\d+)?|[^\w\s]+|\s+)/g;
+  
+  const tokens = html.match(tokenizer) || [];
+  
+  const keywords = new Set(['if', 'elif', 'else', 'and', 'or', 'not', 'True', 'False']);
+  const builtins = new Set(['print']);
+  const knownVars = new Set(['pontos', 'recorde', 'idade', 'pdl', 'valor_compra', 'cor', 'pedestre_esperando', 'vidas', 'temperatura', 'altura', 'energia']);
+  
+  const highlightedTokens = tokens.map((token, index) => {
+    // 1. Comentários
+    if (token.startsWith('#')) {
+      return `<span class="hl-comment">${token}</span>`;
+    }
+    
+    // 2. Strings
+    if (token.startsWith('&quot;') || token.startsWith('&#039;')) {
+      return `<span class="hl-string">${token}</span>`;
+    }
+    
+    // 3. Números
+    if (/^\d+(?:\.\d+)?$/.test(token)) {
+      return `<span class="hl-number">${token}</span>`;
+    }
+    
+    // 4. Identificadores (Palavras e Variáveis)
+    if (/^[a-zA-Z_]\w*$/.test(token)) {
+      if (keywords.has(token)) {
+        return `<span class="hl-keyword">${token}</span>`;
+      }
+      if (builtins.has(token)) {
+        return `<span class="hl-builtin">${token}</span>`;
+      }
+      if (knownVars.has(token)) {
+        return `<span class="hl-variable">${token}</span>`;
+      }
+      
+      // Detecção de atribuição de novas variáveis: verifica se o próximo token não-vazio é '='
+      let nextIndex = index + 1;
+      while (nextIndex < tokens.length && /^\s+$/.test(tokens[nextIndex])) {
+        nextIndex++;
+      }
+      if (nextIndex < tokens.length && tokens[nextIndex] === '=') {
+        return `<span class="hl-variable">${token}</span>`;
+      }
+      
+      return token; // Identificador padrão não colorido
+    }
+    
+    // 5. Espaços, operadores e pontuação
+    return token;
+  });
+  
+  return highlightedTokens.join('');
+}
+
+function updateEditorHighlight(textarea, pre) {
+  if (!textarea || !pre) return;
+  const codeEl = pre.querySelector('code');
+  if (codeEl) {
+    codeEl.innerHTML = highlightPython(textarea.value);
+  } else {
+    pre.innerHTML = highlightPython(textarea.value);
+  }
+  syncEditorScroll(textarea, pre);
+}
+
+// Sincroniza o scroll da textarea com o pre de fundo
+function syncEditorScroll(textarea, pre) {
+  if (!textarea || !pre) return;
+  pre.scrollTop = textarea.scrollTop;
+  pre.scrollLeft = textarea.scrollLeft;
+}
+
+// Intercepta a tecla Tab para inserir 4 espaços ao invés de perder o foco
+function enableTabKeyPress(textareaId, onInputCallback) {
+  const textarea = document.getElementById(textareaId);
+  if (!textarea) return;
+  
+  textarea.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const start = this.selectionStart;
+      const end = this.selectionEnd;
+      
+      const spaces = "    ";
+      this.value = this.value.substring(0, start) + spaces + this.value.substring(end);
+      
+      this.selectionStart = this.selectionEnd = start + 4;
+      
+      if (onInputCallback) {
+        onInputCallback(this.value);
+      }
+      
+      const pre = this.nextElementSibling;
+      if (pre) {
+        updateEditorHighlight(this, pre);
+      }
+    }
+  });
+}
+
+window.syncEditorScroll = syncEditorScroll;
+window.updateEditorHighlight = updateEditorHighlight;
