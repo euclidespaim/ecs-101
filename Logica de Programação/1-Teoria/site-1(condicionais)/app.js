@@ -1172,6 +1172,13 @@ function renderPerformanceReport() {
 window.renderPerformanceReport = renderPerformanceReport;
 
 // --- SEÇÃO DE AVALIAÇÃO 1 ---
+// Configuração do EmailJS para envio automático silencioso
+const EMAILJS_CONFIG = {
+  serviceId: "service_9u2sac8",
+  templateId: "YOUR_TEMPLATE_ID", // Substitua pelo ID do seu modelo no painel do EmailJS (ex: template_xxxxxx)
+  publicKey: "YOUR_PUBLIC_KEY"   // Substitua pela sua Chave Pública (Public Key) no painel do EmailJS
+};
+
 STATE.exam = {
   activeQ: 1
 };
@@ -1600,25 +1607,29 @@ function submitExamFinal() {
   // Fecha o modal de revisão
   closeExamReview();
   
-  // Abre o Mailto URI de e-mail para o professor em uma nova aba
-  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
-  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
-  let nameStr = name1;
-  if (name2) nameStr += " e " + name2;
-  
-  const emailRecipient = "euclidespaim@gmail.com";
-  const subjectText = `Avaliação 1 - ${nameStr}`;
-  const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(reportText)}`;
-  
-  // Abre em nova guia/aba
-  window.open(mailtoUrl, '_blank');
-  
   // Mostra a tela de sucesso
   const contentCard = document.getElementById('exam-content-card');
   const successCard = document.getElementById('exam-success-card');
   if (contentCard && successCard) {
     contentCard.style.display = 'none';
     successCard.style.display = 'block';
+  }
+
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
+  const subjectText = `Avaliação 1 - ${nameStr}`;
+
+  // Verifica se o EmailJS está configurado
+  if (EMAILJS_CONFIG.templateId && EMAILJS_CONFIG.templateId !== "YOUR_TEMPLATE_ID" &&
+      EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== "YOUR_PUBLIC_KEY") {
+    // Tenta envio automático silencioso em segundo plano
+    sendEmailViaEmailJS(subjectText, reportText, nameStr);
+  } else {
+    // Fallback: abre cliente de e-mail tradicional em nova guia
+    fallbackMailto(subjectText, reportText);
   }
 }
 
@@ -1629,11 +1640,55 @@ function retryMailtoSubmit() {
   let nameStr = name1;
   if (name2) nameStr += " e " + name2;
   
-  const emailRecipient = "euclidespaim@gmail.com";
   const subjectText = `Avaliação 1 - ${nameStr}`;
-  const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(reportText)}`;
+  fallbackMailto(subjectText, reportText);
+}
+
+function sendEmailViaEmailJS(subject, reportText, nameStr) {
+  // Carrega o script do EmailJS se ainda não estiver carregado na página
+  if (typeof emailjs === 'undefined') {
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    script.onload = () => {
+      executeEmailJSSend(subject, reportText, nameStr);
+    };
+    script.onerror = () => {
+      alert("Erro ao carregar serviço de envio automático. Abrindo e-mail em nova guia como contingência...");
+      fallbackMailto(subject, reportText);
+    };
+    document.head.appendChild(script);
+  } else {
+    executeEmailJSSend(subject, reportText, nameStr);
+  }
+}
+
+function executeEmailJSSend(subject, reportText, nameStr) {
+  emailjs.init({
+    publicKey: EMAILJS_CONFIG.publicKey,
+  });
   
-  // Abre em nova guia/aba
+  const templateParams = {
+    subject: subject,
+    from_name: nameStr,
+    message: reportText
+  };
+  
+  emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, templateParams)
+    .then(response => {
+      console.log('EMAILJS SUCCESS!', response.status, response.text);
+      alert("Avaliação enviada com sucesso ao e-mail do professor via EmailJS! 🎉");
+    })
+    .catch(error => {
+      console.error('EMAILJS FAILED...', error);
+      alert("Falha no envio automático via EmailJS. Abrindo cliente de e-mail local em nova guia como contingência...\nErro: " + (error.message || JSON.stringify(error)));
+      fallbackMailto(subject, reportText);
+    });
+}
+
+function fallbackMailto(subject, reportText) {
+  const emailRecipient = "euclidespaim@gmail.com";
+  const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportText)}`;
   window.open(mailtoUrl, '_blank');
 }
 
