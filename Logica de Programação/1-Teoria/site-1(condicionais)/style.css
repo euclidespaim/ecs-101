@@ -1240,6 +1240,10 @@ main {
   resize: none !important;
   z-index: 2;
   word-wrap: normal !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
 }
 
 .editor-wrapper pre {
@@ -1247,6 +1251,10 @@ main {
   z-index: 1;
   pointer-events: none;
   scrollbar-width: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
 }
 
 .editor-wrapper pre::-webkit-scrollbar {
@@ -1261,6 +1269,10 @@ main {
   color: inherit !important;
   background: transparent !important;
   padding: 0 !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
 }
 
 /* Palavras-chave: if, elif, else, and, or, not, True, False */
