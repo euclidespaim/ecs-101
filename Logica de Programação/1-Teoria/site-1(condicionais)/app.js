@@ -52,7 +52,9 @@ function loadProgress() {
         challengeAttempts: parsed.challengeAttempts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         // Propriedades da Avaliação 1
         examUnlocked: parsed.examUnlocked || false,
-        examName: parsed.examName || "",
+        examName1: parsed.examName1 || "",
+        examName2: parsed.examName2 || "",
+        examSubmitted: parsed.examSubmitted || false,
         examCodes: parsed.examCodes || {},
         examResults: parsed.examResults || {}
       };
@@ -70,7 +72,9 @@ function loadProgress() {
       challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
       // Propriedades da Avaliação 1
       examUnlocked: false,
-      examName: "",
+      examName1: "",
+      examName2: "",
+      examSubmitted: false,
       examCodes: {},
       examResults: {}
     };
@@ -93,7 +97,9 @@ function resetProgress() {
       quizAttempts: 0,
       challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
       examUnlocked: false,
-      examName: "",
+      examName1: "",
+      examName2: "",
+      examSubmitted: false,
       examCodes: {},
       examResults: {}
     };
@@ -1189,11 +1195,11 @@ function setupExam() {
   });
   listContainer.innerHTML = html;
   
-  // Carrega o nome se já estiver salvo
-  const nameInput = document.getElementById('exam-student-name');
-  if (nameInput) {
-    nameInput.value = STATE.progress.examName || "";
-  }
+  // Carrega os nomes se já estiverem salvos
+  const nameInput1 = document.getElementById('exam-student-name-1');
+  const nameInput2 = document.getElementById('exam-student-name-2');
+  if (nameInput1) nameInput1.value = STATE.progress.examName1 || "";
+  if (nameInput2) nameInput2.value = STATE.progress.examName2 || "";
 }
 
 function unlockExam() {
@@ -1220,19 +1226,35 @@ function unlockExam() {
 function refreshExamUI() {
   const authCard = document.getElementById('exam-auth-card');
   const contentCard = document.getElementById('exam-content-card');
+  const successCard = document.getElementById('exam-success-card');
   const questionsArea = document.getElementById('exam-questions-area');
-  const nameInput = document.getElementById('exam-student-name');
+  const nameInput1 = document.getElementById('exam-student-name-1');
+  const nameInput2 = document.getElementById('exam-student-name-2');
   
   if (!authCard || !contentCard) return;
+  
+  // Se o aluno já concluiu/enviou a avaliação, pula direto para a tela de sucesso
+  if (STATE.progress.examSubmitted) {
+    authCard.style.display = 'none';
+    contentCard.style.display = 'none';
+    if (successCard) successCard.style.display = 'block';
+    
+    const textarea = document.getElementById('exam-report-text-copy');
+    if (textarea) textarea.value = generateExamReportText();
+    return;
+  }
   
   if (STATE.progress.examUnlocked) {
     authCard.style.display = 'none';
     contentCard.style.display = 'block';
+    if (successCard) successCard.style.display = 'none';
     
-    const name = STATE.progress.examName || "";
-    if (nameInput) nameInput.value = name;
+    const name1 = STATE.progress.examName1 || "";
+    const name2 = STATE.progress.examName2 || "";
+    if (nameInput1) nameInput1.value = name1;
+    if (nameInput2) nameInput2.value = name2;
     
-    if (name.trim().length > 2) {
+    if (name1.trim().length > 2) {
       if (questionsArea) questionsArea.style.display = 'block';
       loadExamQuestion(STATE.exam.activeQ);
     } else {
@@ -1241,15 +1263,20 @@ function refreshExamUI() {
   } else {
     authCard.style.display = 'block';
     contentCard.style.display = 'none';
+    if (successCard) successCard.style.display = 'none';
   }
 }
 
-function onExamNameChange(name) {
-  STATE.progress.examName = name;
+function onExamNameChange() {
+  const name1 = document.getElementById('exam-student-name-1').value;
+  const name2 = document.getElementById('exam-student-name-2').value;
+  
+  STATE.progress.examName1 = name1;
+  STATE.progress.examName2 = name2;
   saveProgress();
   
   const questionsArea = document.getElementById('exam-questions-area');
-  if (name.trim().length > 2) {
+  if (name1.trim().length > 2) {
     if (questionsArea) questionsArea.style.display = 'block';
     loadExamQuestion(STATE.exam.activeQ);
   } else {
@@ -1443,9 +1470,11 @@ function runAndValidateExamCode() {
 }
 
 function openExamReview() {
-  const name = STATE.progress.examName ? STATE.progress.examName.trim() : "";
-  if (name.length < 3) {
-    alert("Por favor, preencha seu nome completo antes de revisar a avaliação!");
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  
+  if (name1.length < 3) {
+    alert("Por favor, preencha o nome do Integrante 1 antes de revisar a avaliação!");
     return;
   }
   
@@ -1455,9 +1484,12 @@ function openExamReview() {
   
   if (!modal || !infoDiv || !listDiv) return;
   
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
   infoDiv.innerHTML = `
     <div style="font-size: 1.1rem; color: var(--text-main);">
-      Aluno(a): <strong style="color: var(--primary-navy);">${name}</strong>
+      Integrantes: <strong style="color: var(--primary-navy);">${nameStr}</strong>
     </div>
     <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
       Código de Acesso Utilizado: <code>${STATE.progress.examUnlocked ? 'ecs101' : 'Não autenticado'}</code>
@@ -1489,6 +1521,17 @@ function openExamReview() {
   });
   listDiv.innerHTML = html;
   
+  // Adapta os botões de rodapé caso já tenha sido enviado (evita múltiplos envios de e-mail ao reabrir o relatório)
+  const submitBtn = modal.querySelector('.modal-footer .primary-btn');
+  const cancelBtn = modal.querySelector('.modal-footer .btn-secondary');
+  if (STATE.progress.examSubmitted) {
+    if (submitBtn) submitBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.innerText = 'Fechar';
+  } else {
+    if (submitBtn) submitBtn.style.display = 'flex';
+    if (cancelBtn) cancelBtn.innerText = 'Voltar à Prova';
+  }
+  
   modal.style.display = 'flex';
 }
 
@@ -1498,13 +1541,18 @@ function closeExamReview() {
 }
 
 function generateExamReportText() {
-  const name = STATE.progress.examName ? STATE.progress.examName.trim() : "Sem nome";
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " & " + name2;
+  if (!nameStr) nameStr = "Sem identificação";
+  
   const date = new Date().toLocaleString('pt-BR');
   
   let report = `==================================================\n`;
   report += `RELATÓRIO DE AVALIAÇÃO - CONDICIONAIS 101\n`;
   report += `==================================================\n\n`;
-  report += `Aluno(a): ${name}\n`;
+  report += `Alunos/Dupla: ${nameStr}\n`;
   report += `Data de Entrega: ${date}\n`;
   report += `Repositório: https://github.com/euclidespaim/ecs-101\n\n`;
   
@@ -1539,6 +1587,10 @@ function generateExamReportText() {
 }
 
 function submitExamFinal() {
+  // Marca como submetido e salva
+  STATE.progress.examSubmitted = true;
+  saveProgress();
+  
   const reportText = generateExamReportText();
   
   // Atualiza textarea da cópia
@@ -1548,13 +1600,18 @@ function submitExamFinal() {
   // Fecha o modal de revisão
   closeExamReview();
   
-  // Abre o Mailto URI de e-mail para o professor
+  // Abre o Mailto URI de e-mail para o professor em uma nova aba
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
   const emailRecipient = "euclidespaim@gmail.com";
-  const subjectText = `Avaliação 1 - ${STATE.progress.examName.trim()}`;
+  const subjectText = `Avaliação 1 - ${nameStr}`;
   const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(reportText)}`;
   
-  // Abre o window.location
-  window.location.href = mailtoUrl;
+  // Abre em nova guia/aba
+  window.open(mailtoUrl, '_blank');
   
   // Mostra a tela de sucesso
   const contentCard = document.getElementById('exam-content-card');
@@ -1567,10 +1624,17 @@ function submitExamFinal() {
 
 function retryMailtoSubmit() {
   const reportText = generateExamReportText();
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
+  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
   const emailRecipient = "euclidespaim@gmail.com";
-  const subjectText = `Avaliação 1 - ${STATE.progress.examName.trim()}`;
+  const subjectText = `Avaliação 1 - ${nameStr}`;
   const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(reportText)}`;
-  window.location.href = mailtoUrl;
+  
+  // Abre em nova guia/aba
+  window.open(mailtoUrl, '_blank');
 }
 
 function copyExamReportToClipboard() {
@@ -1602,8 +1666,9 @@ function copyExamReportToClipboard() {
 
 function downloadExamReportAsTxt() {
   const reportText = generateExamReportText();
-  const nameClean = STATE.progress.examName ? STATE.progress.examName.trim().replace(/\s+/g, "_") : "avaliacao";
-  const filename = `avaliacao_1_${nameClean}.txt`;
+  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim().replace(/\s+/g, "_") : "avaliacao";
+  const name2 = STATE.progress.examName2 ? "_" + STATE.progress.examName2.trim().replace(/\s+/g, "_") : "";
+  const filename = `avaliacao_1_${name1}${name2}.txt`;
   
   const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
