@@ -1826,50 +1826,60 @@ window.resetEntireExam = resetEntireExam;
 function highlightPython(code) {
   let html = escapeHtml(code);
   
-  // Array para guardar tokens temporariamente (evita conflitos entre strings e comentários)
-  const placeholders = [];
+  // Tokenizer regex: separa strings, comentários, palavras (identificadores/números/keywords) e caracteres especiais
+  const tokenizer = /(&quot;.*?&quot;|&#039;.*?&#039;|#.*|[a-zA-Z_]\w*|\d+(?:\.\d+)?|[^\w\s]+|\s+)/g;
   
-  // Regex para capturar strings (aspas duplas/simples) e comentários sequencialmente
-  const tokenRegex = /(&quot;.*?&quot;|&#039;.*?&#039;|#.*)/g;
+  const tokens = html.match(tokenizer) || [];
   
-  html = html.replace(tokenRegex, (match) => {
-    const placeholder = `__TOKEN_PLACEHOLDER_${placeholders.length}__`;
-    let highlightedToken = match;
-    if (match.startsWith('#')) {
-      highlightedToken = `<span class="hl-comment">${match}</span>`;
-    } else {
-      highlightedToken = `<span class="hl-string">${match}</span>`;
+  const keywords = new Set(['if', 'elif', 'else', 'and', 'or', 'not', 'True', 'False']);
+  const builtins = new Set(['print']);
+  const knownVars = new Set(['pontos', 'recorde', 'idade', 'pdl', 'valor_compra', 'cor', 'pedestre_esperando', 'vidas', 'temperatura', 'altura', 'energia']);
+  
+  const highlightedTokens = tokens.map((token, index) => {
+    // 1. Comentários
+    if (token.startsWith('#')) {
+      return `<span class="hl-comment">${token}</span>`;
     }
-    placeholders.push(highlightedToken);
-    return placeholder;
+    
+    // 2. Strings
+    if (token.startsWith('&quot;') || token.startsWith('&#039;')) {
+      return `<span class="hl-string">${token}</span>`;
+    }
+    
+    // 3. Números
+    if (/^\d+(?:\.\d+)?$/.test(token)) {
+      return `<span class="hl-number">${token}</span>`;
+    }
+    
+    // 4. Identificadores (Palavras e Variáveis)
+    if (/^[a-zA-Z_]\w*$/.test(token)) {
+      if (keywords.has(token)) {
+        return `<span class="hl-keyword">${token}</span>`;
+      }
+      if (builtins.has(token)) {
+        return `<span class="hl-builtin">${token}</span>`;
+      }
+      if (knownVars.has(token)) {
+        return `<span class="hl-variable">${token}</span>`;
+      }
+      
+      // Detecção de atribuição de novas variáveis: verifica se o próximo token não-vazio é '='
+      let nextIndex = index + 1;
+      while (nextIndex < tokens.length && /^\s+$/.test(tokens[nextIndex])) {
+        nextIndex++;
+      }
+      if (nextIndex < tokens.length && tokens[nextIndex] === '=') {
+        return `<span class="hl-variable">${token}</span>`;
+      }
+      
+      return token; // Identificador padrão não colorido
+    }
+    
+    // 5. Espaços, operadores e pontuação
+    return token;
   });
-
-  // Palavras reservadas (keywords): if, elif, else, and, or, not, True, False
-  const keywords = /\b(if|elif|else|and|or|not|True|False)\b/g;
-  html = html.replace(keywords, '<span class="hl-keyword">$1</span>');
-
-  // Funções embutidas: print
-  const builtins = /\b(print)\b/g;
-  html = html.replace(builtins, '<span class="hl-builtin">$1</span>');
-
-  // Variáveis (declaradas por atribuição ou conhecidas nos enunciados)
-  // 1. Variáveis por atribuição: identificador seguido de '='
-  html = html.replace(/\b([a-zA-Z_]\w*)\b(?=\s*=[^=])/g, '<span class="hl-variable">$1</span>');
   
-  // 2. Variáveis conhecidas nos enunciados das questões
-  const knownVars = /\b(pontos|recorde|idade|pdl|valor_compra|cor|pedestre_esperando|vidas|temperatura|altura|energia)\b/g;
-  html = html.replace(knownVars, '<span class="hl-variable">$1</span>');
-
-  // Números (inteiros ou decimais)
-  const numbers = /\b(\d+(?:\.\d+)?)\b/g;
-  html = html.replace(numbers, '<span class="hl-number">$1</span>');
-
-  // Restaura os tokens (strings e comentários) nos seus devidos lugares
-  html = html.replace(/__TOKEN_PLACEHOLDER_(\d+)__/g, (match, idx) => {
-    return placeholders[parseInt(idx)];
-  });
-
-  return html;
+  return highlightedTokens.join('');
 }
 
 function updateEditorHighlight(textarea, pre) {
