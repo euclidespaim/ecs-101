@@ -303,5 +303,61 @@ pedestre_esperando = False
         }
       ]
     }
+  ],
+
+  // Avaliação 1
+  exam: [
+    {
+      id: 1,
+      name: "Questão 1: Vidas do Herói 🎮",
+      description: "Em um jogo de aventura, o jogador começa com uma quantidade de vidas. Se a quantidade de vidas (variável <code>vidas</code>) for <strong>igual a zero</strong>, exiba a mensagem exata <code><em>Game Over</em></code> na tela usando a função <code>print</code>. Caso contrário, exiba a mensagem <code><em>Continue Jogando!</em></code>.",
+      starterCode: `vidas = 3
+
+# Escreva seu código de validação abaixo:
+`,
+      testCases: [
+        { id: 1, label: "Caso 1 (Sem vidas)", setupVariables: { vidas: 0 }, expectedOutput: "Game Over\n" },
+        { id: 2, label: "Caso 2 (Muitas vidas)", setupVariables: { vidas: 3 }, expectedOutput: "Continue Jogando!\n" },
+        { id: 3, label: "Caso 3 (Última vida)", setupVariables: { vidas: 1 }, expectedOutput: "Continue Jogando!\n" }
+      ]
+    },
+    {
+      id: 2,
+      name: "Questão 2: Termômetro da Estufa 🌡️",
+      description: "Uma estufa inteligente precisa monitorar a temperatura interna de uma plantação de morangos. Crie o controle:<br>" +
+                   "• Se a <code>temperatura</code> for <strong>menor que 15</strong> graus, imprima <code><em>Frio - Ligar aquecedor</em></code>.<br>" +
+                   "• Senão, se a <code>temperatura</code> for <strong>menor ou igual a 25</strong>, imprima <code><em>Temperatura ideal</em></code>.<br>" +
+                   "• Caso contrário (se for maior que 25), imprima <code><em>Quente - Ligar resfriador</em></code>.",
+      starterCode: `temperatura = 18.5
+
+# Escreva seu código com if, elif e else abaixo:
+`,
+      testCases: [
+        { id: 1, label: "Caso 1 (Muito frio)", setupVariables: { temperatura: 12 }, expectedOutput: "Frio - Ligar aquecedor\n" },
+        { id: 2, label: "Caso 2 (Limite frio/ideal)", setupVariables: { temperatura: 15 }, expectedOutput: "Temperatura ideal\n" },
+        { id: 3, label: "Caso 3 (Agradável)", setupVariables: { temperatura: 22.5 }, expectedOutput: "Temperatura ideal\n" },
+        { id: 4, label: "Caso 4 (Limite ideal/quente)", setupVariables: { temperatura: 25 }, expectedOutput: "Temperatura ideal\n" },
+        { id: 5, label: "Caso 5 (Muito quente)", setupVariables: { temperatura: 30 }, expectedOutput: "Quente - Ligar resfriador\n" }
+      ]
+    },
+    {
+      id: 3,
+      name: "Questão 3: Montanha-Russa Radical 🎢",
+      description: "Para entrar em uma montanha-russa radical, o visitante deve atender a dois requisitos de segurança ao mesmo tempo:<br>" +
+                   "1. Ter <code>altura</code> maior ou igual a <strong>1.40</strong> metros.<br>" +
+                   "2. Ter <code>idade</code> maior ou igual a <strong>12</strong> anos.<br>" +
+                   "Se o visitante cumprir ambos os requisitos, imprima <code><em>Acesso autorizado</em></code>. Caso contrário, imprima <code><em>Acesso negado</em></code>.",
+      starterCode: `altura = 1.45
+idade = 11
+
+# Escreva seu código de validação abaixo:
+`,
+      testCases: [
+        { id: 1, label: "Caso 1 (Falta idade)", setupVariables: { altura: 1.45, idade: 11 }, expectedOutput: "Acesso negado\n" },
+        { id: 2, label: "Caso 2 (Falta altura)", setupVariables: { altura: 1.35, idade: 14 }, expectedOutput: "Acesso negado\n" },
+        { id: 3, label: "Caso 3 (Autorizado)", setupVariables: { altura: 1.50, idade: 13 }, expectedOutput: "Acesso autorizado\n" },
+        { id: 4, label: "Caso 4 (Limites exatos)", setupVariables: { altura: 1.40, idade: 12 }, expectedOutput: "Acesso autorizado\n" }
+      ]
+    }
   ]
 };

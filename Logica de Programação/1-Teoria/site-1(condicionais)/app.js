@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSimulator();
   setupQuiz();
   setupChallenges();
+  setupExam();
   updateProgressUI();
 });
 
@@ -48,7 +49,12 @@ function loadProgress() {
         completedLevels: parsed.completedLevels || [],
         studentName: parsed.studentName || "",
         quizAttempts: parsed.quizAttempts || 0,
-        challengeAttempts: parsed.challengeAttempts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        challengeAttempts: parsed.challengeAttempts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        // Propriedades da Avaliação 1
+        examUnlocked: parsed.examUnlocked || false,
+        examName: parsed.examName || "",
+        examCodes: parsed.examCodes || {},
+        examResults: parsed.examResults || {}
       };
     } catch (e) {
       console.error("Erro ao ler progresso do localStorage", e);
@@ -61,7 +67,12 @@ function loadProgress() {
       completedLevels: [],
       studentName: "",
       quizAttempts: 0,
-      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      // Propriedades da Avaliação 1
+      examUnlocked: false,
+      examName: "",
+      examCodes: {},
+      examResults: {}
     };
   }
 }
@@ -80,7 +91,11 @@ function resetProgress() {
       completedLevels: [],
       studentName: "",
       quizAttempts: 0,
-      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      examUnlocked: false,
+      examName: "",
+      examCodes: {},
+      examResults: {}
     };
     saveProgress();
     // Reinicia estados locais
@@ -92,6 +107,7 @@ function resetProgress() {
     // Atualiza UIs
     setupQuiz();
     setupChallenges();
+    setupExam();
     const nameInput = document.getElementById('student-name-input');
     if (nameInput) nameInput.value = "";
     renderPerformanceReport();
@@ -195,6 +211,8 @@ function switchTab(tabId) {
     loadChallenge(STATE.challenges.currentLevel);
   } else if (tabId === 'report') {
     renderPerformanceReport();
+  } else if (tabId === 'exam') {
+    refreshExamUI();
   }
 }
 
@@ -1146,3 +1164,481 @@ function renderPerformanceReport() {
   `;
 }
 window.renderPerformanceReport = renderPerformanceReport;
+
+// --- SEÇÃO DE AVALIAÇÃO 1 ---
+STATE.exam = {
+  activeQ: 1
+};
+
+function setupExam() {
+  const listContainer = document.getElementById('exam-list-container');
+  if (!listContainer) return;
+  
+  // Limpa e gera lista lateral de questões
+  let html = "";
+  SITE_DATA.exam.forEach(q => {
+    const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
+    const completedClass = isCompleted ? 'completed' : '';
+    const activeClass = q.id === STATE.exam.activeQ ? 'active' : '';
+    
+    html += `
+      <button class="challenge-item ${activeClass} ${completedClass}" id="exam-item-${q.id}" onclick="selectExamQuestion(${q.id})">
+        Questão ${q.id}: ${q.name.split(':')[1].trim()}
+      </button>
+    `;
+  });
+  listContainer.innerHTML = html;
+  
+  // Carrega o nome se já estiver salvo
+  const nameInput = document.getElementById('exam-student-name');
+  if (nameInput) {
+    nameInput.value = STATE.progress.examName || "";
+  }
+}
+
+function unlockExam() {
+  const pwdInput = document.getElementById('exam-password-input');
+  const errorDiv = document.getElementById('exam-auth-error');
+  
+  if (!pwdInput) return;
+  
+  const enteredPassword = pwdInput.value.trim();
+  
+  // Senha definida: "ecs101" ou "aula101"
+  if (enteredPassword === 'ecs101' || enteredPassword === 'aula101') {
+    STATE.progress.examUnlocked = true;
+    if (errorDiv) errorDiv.style.display = 'none';
+    saveProgress();
+    refreshExamUI();
+  } else {
+    if (errorDiv) errorDiv.style.display = 'block';
+    pwdInput.value = "";
+    pwdInput.focus();
+  }
+}
+
+function refreshExamUI() {
+  const authCard = document.getElementById('exam-auth-card');
+  const contentCard = document.getElementById('exam-content-card');
+  const questionsArea = document.getElementById('exam-questions-area');
+  const nameInput = document.getElementById('exam-student-name');
+  
+  if (!authCard || !contentCard) return;
+  
+  if (STATE.progress.examUnlocked) {
+    authCard.style.display = 'none';
+    contentCard.style.display = 'block';
+    
+    const name = STATE.progress.examName || "";
+    if (nameInput) nameInput.value = name;
+    
+    if (name.trim().length > 2) {
+      if (questionsArea) questionsArea.style.display = 'block';
+      loadExamQuestion(STATE.exam.activeQ);
+    } else {
+      if (questionsArea) questionsArea.style.display = 'none';
+    }
+  } else {
+    authCard.style.display = 'block';
+    contentCard.style.display = 'none';
+  }
+}
+
+function onExamNameChange(name) {
+  STATE.progress.examName = name;
+  saveProgress();
+  
+  const questionsArea = document.getElementById('exam-questions-area');
+  if (name.trim().length > 2) {
+    if (questionsArea) questionsArea.style.display = 'block';
+    loadExamQuestion(STATE.exam.activeQ);
+  } else {
+    if (questionsArea) questionsArea.style.display = 'none';
+  }
+}
+
+function selectExamQuestion(qId) {
+  STATE.exam.activeQ = qId;
+  
+  // Atualiza botões laterais
+  document.querySelectorAll('#exam-list-container .challenge-item').forEach(btn => {
+    const btnId = parseInt(btn.id.replace('exam-item-', ''));
+    btn.classList.remove('active');
+    if (btnId === qId) {
+      btn.classList.add('active');
+    }
+  });
+  
+  loadExamQuestion(qId);
+}
+
+function loadExamQuestion(qId) {
+  const q = SITE_DATA.exam.find(item => item.id === qId);
+  if (!q) return;
+  
+  const qTitle = document.getElementById('exam-q-title');
+  const qDesc = document.getElementById('exam-q-description');
+  const editor = document.getElementById('exam-code-editor');
+  const resultsPanel = document.getElementById('exam-results-panel');
+  
+  if (qTitle && qDesc && editor) {
+    qTitle.innerHTML = q.name;
+    qDesc.innerHTML = q.description;
+    
+    // Carrega o código do estado ou inicial
+    if (STATE.progress.examCodes && STATE.progress.examCodes[qId] !== undefined) {
+      editor.value = STATE.progress.examCodes[qId];
+    } else {
+      editor.value = q.starterCode;
+    }
+  }
+  
+  if (resultsPanel) {
+    resultsPanel.classList.remove('visible');
+  }
+}
+
+function onExamCodeInput(code) {
+  if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
+  STATE.progress.examCodes[STATE.exam.activeQ] = code;
+  saveProgress();
+}
+
+function resetExamCode() {
+  const qId = STATE.exam.activeQ;
+  const q = SITE_DATA.exam.find(item => item.id === qId);
+  
+  if (q && confirm("Deseja voltar o código desta questão para o estado original?")) {
+    const editor = document.getElementById('exam-code-editor');
+    if (editor) editor.value = q.starterCode;
+    
+    if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
+    STATE.progress.examCodes[qId] = q.starterCode;
+    
+    if (STATE.progress.examResults) {
+      delete STATE.progress.examResults[qId];
+    }
+    
+    saveProgress();
+    
+    const btn = document.getElementById(`exam-item-${qId}`);
+    if (btn) btn.classList.remove('completed');
+    
+    const resultsPanel = document.getElementById('exam-results-panel');
+    if (resultsPanel) resultsPanel.classList.remove('visible');
+  }
+}
+
+function runAndValidateExamCode() {
+  const qId = STATE.exam.activeQ;
+  const q = SITE_DATA.exam.find(item => item.id === qId);
+  const editor = document.getElementById('exam-code-editor');
+  
+  if (!q || !editor) return;
+  
+  const code = editor.value;
+  if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
+  STATE.progress.examCodes[qId] = code;
+  
+  const resultsPanel = document.getElementById('exam-results-panel');
+  if (!resultsPanel) return;
+  
+  resultsPanel.classList.add('visible');
+  resultsPanel.innerHTML = "";
+  
+  let allPass = true;
+  let testCaseResults = [];
+  let compileError = null;
+  
+  for (let test of q.testCases) {
+    const result = runPython(code, test.setupVariables);
+    
+    if (!result.success) {
+      compileError = result.error;
+      allPass = false;
+      break;
+    }
+    
+    const actual = result.output.trim();
+    const expected = test.expectedOutput.trim();
+    const isPass = actual === expected;
+    
+    if (!isPass) {
+      allPass = false;
+    }
+    
+    testCaseResults.push({
+      label: test.label,
+      setup: test.setupVariables,
+      expected: expected,
+      actual: actual,
+      pass: isPass
+    });
+  }
+  
+  if (compileError) {
+    resultsPanel.innerHTML = `
+      <div class="results-header" style="color: var(--color-error)">
+        ⚠️ Erro Encontrado no Código:
+      </div>
+      <div class="compiler-error-box">${compileError}</div>
+      <p style="font-size: 0.9rem; color: var(--text-light);">
+        Revise seu código, corrija as regras de indentação do Python e tente novamente.
+      </p>
+    `;
+    return;
+  }
+  
+  let headerColor = allPass ? 'var(--color-success)' : 'var(--color-error)';
+  let headerText = allPass ? '🎉 Parabéns! Código validado com sucesso!' : '❌ Ops! Seu código falhou em alguns testes de validação.';
+  
+  let rowsHtml = testCaseResults.map((res, idx) => {
+    let rowClass = res.pass ? 'pass' : 'fail';
+    let indicatorClass = res.pass ? 'pass' : 'fail';
+    let indicatorText = res.pass ? 'SUCESSO' : 'FALHOU';
+    
+    let varsStr = Object.entries(res.setup).map(([k, v]) => `${k} = ${typeof v === 'string' ? `'${v}'` : (v === true ? 'True' : (v === false ? 'False' : v))}`).join(', ');
+    
+    return `
+      <div class="test-case-row ${rowClass}">
+        <div class="test-case-info">
+          <span class="status-indicator ${indicatorClass}">${indicatorText}</span>
+          <strong>${res.label}</strong> <span style="color: var(--text-light); font-size: 0.85rem;">(Entrada: ${varsStr})</span>
+        </div>
+        <button class="toggle-details-btn" onclick="toggleTestDetails(${idx})">Ver Detalhes</button>
+        
+        <div id="test-details-${idx}" class="test-case-details">
+          <div><strong>Saída Esperada:</strong></div>
+          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0;">${res.expected || '(Vazio)'}</pre>
+          <div><strong>Saída do Seu Código:</strong></div>
+          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0; color: ${res.pass ? 'green' : 'red'};">${res.actual || '(Vazio)'}</pre>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  resultsPanel.innerHTML = `
+    <div class="results-header" style="color: ${headerColor}">
+      ${headerText}
+    </div>
+    <div class="test-cases-summary">
+      ${rowsHtml}
+    </div>
+  `;
+  
+  // Atualiza resultados no estado
+  if (!STATE.progress.examResults) STATE.progress.examResults = {};
+  STATE.progress.examResults[qId] = allPass;
+  saveProgress();
+  
+  // Atualiza botão lateral
+  const btn = document.getElementById(`exam-item-${qId}`);
+  if (btn) {
+    if (allPass) {
+      btn.classList.add('completed');
+    } else {
+      btn.classList.remove('completed');
+    }
+  }
+}
+
+function openExamReview() {
+  const name = STATE.progress.examName ? STATE.progress.examName.trim() : "";
+  if (name.length < 3) {
+    alert("Por favor, preencha seu nome completo antes de revisar a avaliação!");
+    return;
+  }
+  
+  const modal = document.getElementById('exam-review-modal');
+  const infoDiv = document.getElementById('exam-review-student-info');
+  const listDiv = document.getElementById('exam-review-questions-list');
+  
+  if (!modal || !infoDiv || !listDiv) return;
+  
+  infoDiv.innerHTML = `
+    <div style="font-size: 1.1rem; color: var(--text-main);">
+      Aluno(a): <strong style="color: var(--primary-navy);">${name}</strong>
+    </div>
+    <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
+      Código de Acesso Utilizado: <code>${STATE.progress.examUnlocked ? 'ecs101' : 'Não autenticado'}</code>
+    </div>
+  `;
+  
+  let html = "";
+  SITE_DATA.exam.forEach(q => {
+    const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
+    const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
+    
+    let statusBadge = `<span class="status-indicator fail">FALHANDO OU NÃO TESTADO</span>`;
+    if (isCompleted) {
+      statusBadge = `<span class="status-indicator pass">VALIDADO COM SUCESSO (PASSOU NOS TESTES)</span>`;
+    }
+    
+    html += `
+      <div class="review-q-item">
+        <div class="review-q-header">
+          <span>${q.name}</span>
+          ${statusBadge}
+        </div>
+        <div class="review-q-body">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-light);">Código Desenvolvido:</div>
+          <pre class="review-q-code">${escapeHtml(code)}</pre>
+        </div>
+      </div>
+    `;
+  });
+  listDiv.innerHTML = html;
+  
+  modal.style.display = 'flex';
+}
+
+function closeExamReview() {
+  const modal = document.getElementById('exam-review-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function generateExamReportText() {
+  const name = STATE.progress.examName ? STATE.progress.examName.trim() : "Sem nome";
+  const date = new Date().toLocaleString('pt-BR');
+  
+  let report = `==================================================\n`;
+  report += `RELATÓRIO DE AVALIAÇÃO - CONDICIONAIS 101\n`;
+  report += `==================================================\n\n`;
+  report += `Aluno(a): ${name}\n`;
+  report += `Data de Entrega: ${date}\n`;
+  report += `Repositório: https://github.com/euclidespaim/ecs-101\n\n`;
+  
+  report += `--------------------------------------------------\n`;
+  report += `DESEMPENHO GERAL:\n`;
+  report += `--------------------------------------------------\n`;
+  
+  let totalCorrect = 0;
+  SITE_DATA.exam.forEach(q => {
+    const passed = STATE.progress.examResults && STATE.progress.examResults[q.id];
+    if (passed) totalCorrect++;
+  });
+  
+  report += `Questões Resolvidas: ${totalCorrect} de ${SITE_DATA.exam.length}\n`;
+  report += `Nota Estimada: ${(totalCorrect / SITE_DATA.exam.length * 10).toFixed(1)} / 10.0\n\n`;
+  
+  SITE_DATA.exam.forEach(q => {
+    const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
+    const passed = STATE.progress.examResults && STATE.progress.examResults[q.id] ? "PASSOU EM TODOS OS TESTES" : "NÃO PASSOU OU NÃO TESTADO";
+    
+    report += `==================================================\n`;
+    report += `${q.name}\n`;
+    report += `Status: ${passed}\n`;
+    report += `--------------------------------------------------\n`;
+    report += `CÓDIGO ENVIADO:\n`;
+    report += `--------------------------------------------------\n`;
+    report += `${code}\n`;
+    report += `==================================================\n\n`;
+  });
+  
+  return report;
+}
+
+function submitExamFinal() {
+  const reportText = generateExamReportText();
+  
+  // Atualiza textarea da cópia
+  const textarea = document.getElementById('exam-report-text-copy');
+  if (textarea) textarea.value = reportText;
+  
+  // Fecha o modal de revisão
+  closeExamReview();
+  
+  // Abre o Mailto URI de e-mail para o professor
+  const emailRecipient = "euclidespaim@gmail.com";
+  const subjectText = `Avaliação 1 - ${STATE.progress.examName.trim()}`;
+  const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(reportText)}`;
+  
+  // Abre o window.location
+  window.location.href = mailtoUrl;
+  
+  // Mostra a tela de sucesso
+  const contentCard = document.getElementById('exam-content-card');
+  const successCard = document.getElementById('exam-success-card');
+  if (contentCard && successCard) {
+    contentCard.style.display = 'none';
+    successCard.style.display = 'block';
+  }
+}
+
+function retryMailtoSubmit() {
+  const reportText = generateExamReportText();
+  const emailRecipient = "euclidespaim@gmail.com";
+  const subjectText = `Avaliação 1 - ${STATE.progress.examName.trim()}`;
+  const mailtoUrl = `mailto:${emailRecipient}?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(reportText)}`;
+  window.location.href = mailtoUrl;
+}
+
+function copyExamReportToClipboard() {
+  const textarea = document.getElementById('exam-report-text-copy');
+  if (!textarea) return;
+  
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // Para mobile
+  
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    const copyBtn = document.getElementById('exam-copy-btn');
+    if (copyBtn) {
+      copyBtn.innerText = "Copiado! ✓";
+      copyBtn.style.backgroundColor = "var(--color-success-bg)";
+      copyBtn.style.color = "#065F46";
+      copyBtn.style.borderColor = "var(--color-success)";
+      
+      setTimeout(() => {
+        copyBtn.innerText = "Copiar Relatório 📋";
+        copyBtn.style.backgroundColor = "";
+        copyBtn.style.color = "";
+        copyBtn.style.borderColor = "";
+      }, 2500);
+    }
+  }).catch(err => {
+    alert("Falha ao copiar automaticamente: " + err);
+  });
+}
+
+function downloadExamReportAsTxt() {
+  const reportText = generateExamReportText();
+  const nameClean = STATE.progress.examName ? STATE.progress.examName.trim().replace(/\s+/g, "_") : "avaliacao";
+  const filename = `avaliacao_1_${nameClean}.txt`;
+  
+  const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Vincula funções do Exame ao escopo global (window)
+window.unlockExam = unlockExam;
+window.onExamNameChange = onExamNameChange;
+window.selectExamQuestion = selectExamQuestion;
+window.onExamCodeInput = onExamCodeInput;
+window.resetExamCode = resetExamCode;
+window.runAndValidateExamCode = runAndValidateExamCode;
+window.openExamReview = openExamReview;
+window.closeExamReview = closeExamReview;
+window.submitExamFinal = submitExamFinal;
+window.copyExamReportToClipboard = copyExamReportToClipboard;
+window.downloadExamReportAsTxt = downloadExamReportAsTxt;
+window.retryMailtoSubmit = retryMailtoSubmit;
+window.setupExam = setupExam;
+window.refreshExamUI = refreshExamUI;
