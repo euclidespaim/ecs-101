@@ -1645,45 +1645,37 @@ function retryMailtoSubmit() {
 }
 
 function sendEmailViaEmailJS(subject, reportText, nameStr) {
-  // Carrega o script do EmailJS se ainda não estiver carregado na página
-  if (typeof emailjs === 'undefined') {
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-    script.onload = () => {
-      executeEmailJSSend(subject, reportText, nameStr);
-    };
-    script.onerror = () => {
-      alert("Erro ao carregar serviço de envio automático. Abrindo e-mail em nova guia como contingência...");
-      fallbackMailto(subject, reportText);
-    };
-    document.head.appendChild(script);
-  } else {
-    executeEmailJSSend(subject, reportText, nameStr);
-  }
-}
-
-function executeEmailJSSend(subject, reportText, nameStr) {
-  emailjs.init({
-    publicKey: EMAILJS_CONFIG.publicKey,
-  });
-  
-  const templateParams = {
-    subject: subject,
-    from_name: nameStr,
-    message: reportText
+  const payload = {
+    service_id: EMAILJS_CONFIG.serviceId,
+    template_id: EMAILJS_CONFIG.templateId,
+    user_id: EMAILJS_CONFIG.publicKey,
+    template_params: {
+      subject: subject,
+      from_name: nameStr,
+      message: reportText
+    }
   };
-  
-  emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, templateParams)
-    .then(response => {
-      console.log('EMAILJS SUCCESS!', response.status, response.text);
+
+  fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(response => {
+    if (response.ok) {
+      console.log('EMAILJS REST SUCCESS!');
       alert("Avaliação enviada com sucesso ao e-mail do professor via EmailJS! 🎉");
-    })
-    .catch(error => {
-      console.error('EMAILJS FAILED...', error);
-      alert("Falha no envio automático via EmailJS. Abrindo cliente de e-mail local em nova guia como contingência...\nErro: " + (error.message || JSON.stringify(error)));
-      fallbackMailto(subject, reportText);
-    });
+    } else {
+      return response.text().then(text => { throw new Error(text); });
+    }
+  })
+  .catch(error => {
+    console.error('EMAILJS REST FAILED...', error);
+    alert("Falha no envio automático via EmailJS. Abrindo cliente de e-mail local em nova guia como contingência...\nErro: " + error.message);
+    fallbackMailto(subject, reportText);
+  });
 }
 
 function fallbackMailto(subject, reportText) {
