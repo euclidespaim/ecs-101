@@ -1201,3 +1201,96 @@ main {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* --- Estilos do Editor e Highlight (VS Code Style) --- */
+.editor-wrapper {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background-color: #1E293B;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.editor-wrapper textarea,
+.editor-wrapper pre {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 1rem;
+  font-family: var(--font-code) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.5 !important;
+  white-space: pre !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+  border: none !important;
+  outline: none !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.editor-wrapper textarea {
+  color: transparent !important;
+  background: transparent !important;
+  caret-color: #38BDF8 !important; /* Cursor azul claro como no VS Code */
+  resize: none !important;
+  z-index: 2;
+  word-wrap: normal !important;
+}
+
+.editor-wrapper pre {
+  color: #E2E8F0;
+  z-index: 1;
+  pointer-events: none;
+  scrollbar-width: none !important;
+}
+
+.editor-wrapper pre::-webkit-scrollbar {
+  display: none !important;
+}
+
+.editor-wrapper pre code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  white-space: inherit !important;
+  color: inherit !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Palavras-chave: if, elif, else, and, or, not, True, False */
+.hl-keyword {
+  color: #F43F5E !important;
+  font-weight: 600;
+}
+
+/* Funções integradas: print */
+.hl-builtin {
+  color: #F59E0B !important;
+}
+
+/* Números */
+.hl-number {
+  color: #A7F3D0 !important;
+}
+
+/* Strings */
+.hl-string {
+  color: #34D399 !important;
+}
+
+/* Comentários */
+.hl-comment {
+  color: #64748B !important;
+  font-style: italic !important;
+}
+
+/* Variáveis */
+.hl-variable {
+  color: #93C5FD !important;
+}

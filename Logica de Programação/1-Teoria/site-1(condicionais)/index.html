@@ -317,7 +317,10 @@ if tem_ingresso and idade >= 16:
               <span class="lang">python 3</span>
             </div>
             <div class="editor-container">
-              <textarea id="chal-code-editor" class="code-textarea" spellcheck="false" oninput="onCodeEditorInput(this.value)"></textarea>
+              <div class="editor-wrapper">
+                <textarea id="chal-code-editor" class="code-textarea" spellcheck="false" oninput="onCodeEditorInput(this.value); updateEditorHighlight(this, this.nextElementSibling)" onscroll="syncEditorScroll(this, this.nextElementSibling)"></textarea>
+                <pre id="chal-code-highlight"><code></code></pre>
+              </div>
             </div>
             
             <div class="editor-toolbar">
@@ -419,7 +422,10 @@ if tem_ingresso and idade >= 16:
                   <span class="lang">python 3</span>
                 </div>
                 <div class="editor-container">
-                  <textarea id="exam-code-editor" class="code-textarea" spellcheck="false" oninput="onExamCodeInput(this.value)"></textarea>
+                  <div class="editor-wrapper">
+                    <textarea id="exam-code-editor" class="code-textarea" spellcheck="false" oninput="onExamCodeInput(this.value); updateEditorHighlight(this, this.nextElementSibling)" onscroll="syncEditorScroll(this, this.nextElementSibling)"></textarea>
+                    <pre id="exam-code-highlight"><code></code></pre>
+                  </div>
                 </div>
                 <div class="editor-toolbar">
                   <button onclick="resetExamCode()" class="btn-secondary">Limpar Código 🔄</button>
@@ -498,6 +504,7 @@ if tem_ingresso and idade >= 16:
           <button onclick="openExamReview()" class="primary-btn" style="background-color: var(--primary-navy);">Abrir Relatório da Prova 📋</button>
           <button onclick="copyExamReportToClipboard()" class="btn-secondary" id="exam-copy-btn">Copiar Relatório 📋</button>
           <button onclick="downloadExamReportAsTxt()" class="btn-secondary">Baixar Arquivo .txt 💾</button>
+          <button onclick="resetSubmittedExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-error);">Liberar Envio (Senha do Professor) 🔑</button>
           <button onclick="retryMailtoSubmit()" class="primary-btn" style="background-color: var(--accent-teal);">Reabrir E-mail ✉️</button>
         </div>
       </div>

@@ -716,6 +716,9 @@ function setupChallenges() {
   
   // Carrega o desafio inicial
   loadChallenge(STATE.challenges.currentLevel);
+
+  // Habilita inserção de Tab como 4 espaços
+  enableTabKeyPress('chal-code-editor', onCodeEditorInput);
 }
 
 function selectChallenge(level) {
@@ -757,6 +760,12 @@ function loadChallenge(level) {
       editor.value = STATE.challenges.userCodes[level];
     } else {
       editor.value = ex.starterCode;
+    }
+    
+    // Atualiza destaque
+    const pre = editor.nextElementSibling;
+    if (pre) {
+      updateEditorHighlight(editor, pre);
     }
   }
   
@@ -1175,8 +1184,8 @@ window.renderPerformanceReport = renderPerformanceReport;
 // Configuração do EmailJS para envio automático silencioso
 const EMAILJS_CONFIG = {
   serviceId: "service_9u2sac8",
-  templateId: "YOUR_TEMPLATE_ID", // Substitua pelo ID do seu modelo no painel do EmailJS (ex: template_xxxxxx)
-  publicKey: "YOUR_PUBLIC_KEY"   // Substitua pela sua Chave Pública (Public Key) no painel do EmailJS
+  templateId: "template_yew74so", // ID do modelo criado no painel do EmailJS
+  publicKey: "krM3uc38ucTfqux-q"   // Chave Pública (Public Key) no painel do EmailJS
 };
 
 STATE.exam = {
@@ -1207,6 +1216,9 @@ function setupExam() {
   const nameInput2 = document.getElementById('exam-student-name-2');
   if (nameInput1) nameInput1.value = STATE.progress.examName1 || "";
   if (nameInput2) nameInput2.value = STATE.progress.examName2 || "";
+
+  // Habilita inserção de Tab como 4 espaços
+  enableTabKeyPress('exam-code-editor', onExamCodeInput);
 }
 
 function unlockExam() {
@@ -1324,6 +1336,12 @@ function loadExamQuestion(qId) {
       editor.value = STATE.progress.examCodes[qId];
     } else {
       editor.value = q.starterCode;
+    }
+    
+    // Atualiza destaque
+    const pre = editor.nextElementSibling;
+    if (pre) {
+      updateEditorHighlight(editor, pre);
     }
   }
   
@@ -1652,7 +1670,15 @@ function sendEmailViaEmailJS(subject, reportText, nameStr) {
     template_params: {
       subject: subject,
       from_name: nameStr,
-      message: reportText
+      message: reportText,
+      // Recipient Address variables to avoid "the recipients address is empty" error
+      to_email: "euclidespaim@gmail.com",
+      email: "euclidespaim@gmail.com",
+      from_email: "euclidespaim@gmail.com",
+      reply_to: "euclidespaim@gmail.com",
+      // Template placeholders from the user's template settings
+      name: nameStr,
+      title: subject
     }
   };
 
@@ -1754,3 +1780,116 @@ window.downloadExamReportAsTxt = downloadExamReportAsTxt;
 window.retryMailtoSubmit = retryMailtoSubmit;
 window.setupExam = setupExam;
 window.refreshExamUI = refreshExamUI;
+
+function resetSubmittedExam() {
+  const password = prompt("Digite a senha do professor para liberar uma nova tentativa de envio:");
+  if (password === 'ecs101' || password === 'aula101') {
+    STATE.progress.examSubmitted = false;
+    saveProgress();
+    alert("Avaliação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los.");
+    refreshExamUI();
+  } else if (password !== null) {
+    alert("Senha incorreta!");
+  }
+}
+window.resetSubmittedExam = resetSubmittedExam;
+
+// --- SISTEMA DE DESTAQUE DE SINTAXE PYTHON (VS CODE STYLE) ---
+function highlightPython(code) {
+  let html = escapeHtml(code);
+  
+  // Array para guardar tokens temporariamente (evita conflitos entre strings e comentários)
+  const placeholders = [];
+  
+  // Regex para capturar strings (aspas duplas/simples) e comentários sequencialmente
+  const tokenRegex = /(&quot;.*?&quot;|&#039;.*?&#039;|#.*)/g;
+  
+  html = html.replace(tokenRegex, (match) => {
+    const placeholder = `__TOKEN_PLACEHOLDER_${placeholders.length}__`;
+    let highlightedToken = match;
+    if (match.startsWith('#')) {
+      highlightedToken = `<span class="hl-comment">${match}</span>`;
+    } else {
+      highlightedToken = `<span class="hl-string">${match}</span>`;
+    }
+    placeholders.push(highlightedToken);
+    return placeholder;
+  });
+
+  // Palavras reservadas (keywords): if, elif, else, and, or, not, True, False
+  const keywords = /\b(if|elif|else|and|or|not|True|False)\b/g;
+  html = html.replace(keywords, '<span class="hl-keyword">$1</span>');
+
+  // Funções embutidas: print
+  const builtins = /\b(print)\b/g;
+  html = html.replace(builtins, '<span class="hl-builtin">$1</span>');
+
+  // Variáveis (declaradas por atribuição ou conhecidas nos enunciados)
+  // 1. Variáveis por atribuição: identificador seguido de '='
+  html = html.replace(/\b([a-zA-Z_]\w*)\b(?=\s*=[^=])/g, '<span class="hl-variable">$1</span>');
+  
+  // 2. Variáveis conhecidas nos enunciados das questões
+  const knownVars = /\b(pontos|recorde|idade|pdl|valor_compra|cor|pedestre_esperando|vidas|temperatura|altura|energia)\b/g;
+  html = html.replace(knownVars, '<span class="hl-variable">$1</span>');
+
+  // Números (inteiros ou decimais)
+  const numbers = /\b(\d+(?:\.\d+)?)\b/g;
+  html = html.replace(numbers, '<span class="hl-number">$1</span>');
+
+  // Restaura os tokens (strings e comentários) nos seus devidos lugares
+  html = html.replace(/__TOKEN_PLACEHOLDER_(\d+)__/g, (match, idx) => {
+    return placeholders[parseInt(idx)];
+  });
+
+  return html;
+}
+
+function updateEditorHighlight(textarea, pre) {
+  if (!textarea || !pre) return;
+  const codeEl = pre.querySelector('code');
+  if (codeEl) {
+    codeEl.innerHTML = highlightPython(textarea.value);
+  } else {
+    pre.innerHTML = highlightPython(textarea.value);
+  }
+  syncEditorScroll(textarea, pre);
+}
+
+// Sincroniza o scroll da textarea com o pre de fundo
+function syncEditorScroll(textarea, pre) {
+  if (!textarea || !pre) return;
+  pre.scrollTop = textarea.scrollTop;
+  pre.scrollLeft = textarea.scrollLeft;
+}
+
+// Intercepta a tecla Tab para inserir 4 espaços ao invés de perder o foco
+function enableTabKeyPress(textareaId, onInputCallback) {
+  const textarea = document.getElementById(textareaId);
+  if (!textarea) return;
+  
+  textarea.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const start = this.selectionStart;
+      const end = this.selectionEnd;
+      
+      const spaces = "    ";
+      this.value = this.value.substring(0, start) + spaces + this.value.substring(end);
+      
+      this.selectionStart = this.selectionEnd = start + 4;
+      
+      if (onInputCallback) {
+        onInputCallback(this.value);
+      }
+      
+      const pre = this.nextElementSibling;
+      if (pre) {
+        updateEditorHighlight(this, pre);
+      }
+    }
+  });
+}
+
+window.syncEditorScroll = syncEditorScroll;
+window.updateEditorHighlight = updateEditorHighlight;
