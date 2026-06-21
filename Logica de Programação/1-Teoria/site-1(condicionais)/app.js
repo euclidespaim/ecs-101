@@ -1794,6 +1794,34 @@ function resetSubmittedExam() {
 }
 window.resetSubmittedExam = resetSubmittedExam;
 
+function resetEntireExam() {
+  const password = prompt("Digite a senha do professor para RESETAR COMPLETAMENTE a avaliação (apaga nomes e códigos):");
+  if (password === 'ecs101' || password === 'aula101') {
+    STATE.progress.examUnlocked = false;
+    STATE.progress.examSubmitted = false;
+    STATE.progress.examName1 = "";
+    STATE.progress.examName2 = "";
+    STATE.progress.examCodes = {};
+    STATE.progress.examResults = {};
+    saveProgress();
+    
+    // Limpa campos na UI
+    const nameInput1 = document.getElementById('exam-student-name-1');
+    const nameInput2 = document.getElementById('exam-student-name-2');
+    if (nameInput1) nameInput1.value = "";
+    if (nameInput2) nameInput2.value = "";
+    
+    const pwdInput = document.getElementById('exam-password-input');
+    if (pwdInput) pwdInput.value = "";
+    
+    alert("Avaliação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados.");
+    refreshExamUI();
+  } else if (password !== null) {
+    alert("Senha incorreta!");
+  }
+}
+window.resetEntireExam = resetEntireExam;
+
 // --- SISTEMA DE DESTAQUE DE SINTAXE PYTHON (VS CODE STYLE) ---
 function highlightPython(code) {
   let html = escapeHtml(code);

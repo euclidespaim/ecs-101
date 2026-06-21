@@ -444,16 +444,19 @@ if tem_ingresso and idade >= 16:
           </div>
 
           <!-- Rodapé de Ações do Exame -->
-          <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+          <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm); flex-wrap: wrap; gap: 1rem;">
             <div>
               <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.25rem;">Pronto para entregar?</h4>
               <p style="color: var(--text-light); font-size: 0.9rem;">
                 Revise suas respostas com calma. Você poderá conferir todos os seus códigos antes do envio.
               </p>
             </div>
-            <button onclick="openExamReview()" class="primary-btn" style="background-color: var(--accent-teal); font-size: 1.1rem; padding: 0.8rem 1.5rem;" id="exam-review-btn">
-              Revisar e Enviar Avaliação ➔
-            </button>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+              <button onclick="resetEntireExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-error); padding: 0.8rem 1.2rem;">Resetar Prova 🔄</button>
+              <button onclick="openExamReview()" class="primary-btn" style="background-color: var(--accent-teal); font-size: 1.1rem; padding: 0.8rem 1.5rem;" id="exam-review-btn">
+                Revisar e Enviar Avaliação ➔
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -504,7 +507,8 @@ if tem_ingresso and idade >= 16:
           <button onclick="openExamReview()" class="primary-btn" style="background-color: var(--primary-navy);">Abrir Relatório da Prova 📋</button>
           <button onclick="copyExamReportToClipboard()" class="btn-secondary" id="exam-copy-btn">Copiar Relatório 📋</button>
           <button onclick="downloadExamReportAsTxt()" class="btn-secondary">Baixar Arquivo .txt 💾</button>
-          <button onclick="resetSubmittedExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-error);">Liberar Envio (Senha do Professor) 🔑</button>
+          <button onclick="resetSubmittedExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-warning);">Liberar Envio (Senha do Professor) 🔑</button>
+          <button onclick="resetEntireExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-error);">Resetar Prova Completamente 🔄</button>
           <button onclick="retryMailtoSubmit()" class="primary-btn" style="background-color: var(--accent-teal);">Reabrir E-mail ✉️</button>
         </div>
       </div>
