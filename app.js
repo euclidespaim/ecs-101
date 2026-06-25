@@ -1221,16 +1221,28 @@ function setupExam() {
   enableTabKeyPress('exam-code-editor', onExamCodeInput);
 }
 
-function unlockExam() {
+// Função auxiliar assíncrona para calcular o hash SHA-256 de uma string
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+async function unlockExam() {
   const pwdInput = document.getElementById('exam-password-input');
   const errorDiv = document.getElementById('exam-auth-error');
   
   if (!pwdInput) return;
   
   const enteredPassword = pwdInput.value.trim();
+  const hash = await sha256(enteredPassword);
   
-  // Senha definida: "ecs101" ou "aula101"
-  if (enteredPassword === 'ecs101' || enteredPassword === 'aula101') {
+  // Hash correspondente a "professor101"
+  const expectedHash = "08c27d176d710371afef9924eb32c012803eef04a6647d3febf69422f27a294b";
+  
+  if (hash === expectedHash) {
     STATE.progress.examUnlocked = true;
     if (errorDiv) errorDiv.style.display = 'none';
     saveProgress();
@@ -1781,22 +1793,34 @@ window.retryMailtoSubmit = retryMailtoSubmit;
 window.setupExam = setupExam;
 window.refreshExamUI = refreshExamUI;
 
-function resetSubmittedExam() {
+async function resetSubmittedExam() {
   const password = prompt("Digite a senha do professor para liberar uma nova tentativa de envio:");
-  if (password === 'ecs101' || password === 'aula101') {
+  if (password === null) return;
+  
+  const hash = await sha256(password.trim());
+  // Hash correspondente a "liberar101"
+  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3";
+  
+  if (hash === expectedHash) {
     STATE.progress.examSubmitted = false;
     saveProgress();
     alert("Avaliação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los.");
     refreshExamUI();
-  } else if (password !== null) {
+  } else {
     alert("Senha incorreta!");
   }
 }
 window.resetSubmittedExam = resetSubmittedExam;
 
-function resetEntireExam() {
+async function resetEntireExam() {
   const password = prompt("Digite a senha do professor para RESETAR COMPLETAMENTE a avaliação (apaga nomes e códigos):");
-  if (password === 'ecs101' || password === 'aula101') {
+  if (password === null) return;
+  
+  const hash = await sha256(password.trim());
+  // Hash correspondente a "liberar101"
+  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3";
+  
+  if (hash === expectedHash) {
     STATE.progress.examUnlocked = false;
     STATE.progress.examSubmitted = false;
     STATE.progress.examName1 = "";
@@ -1816,7 +1840,7 @@ function resetEntireExam() {
     
     alert("Avaliação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados.");
     refreshExamUI();
-  } else if (password !== null) {
+  } else {
     alert("Senha incorreta!");
   }
 }
