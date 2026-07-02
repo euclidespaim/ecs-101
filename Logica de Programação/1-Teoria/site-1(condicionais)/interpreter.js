@@ -230,6 +230,31 @@ function runPython(code, initialVars = {}) {
         } else {
           lineJs = `else if (${translatedCond}) {\n`;
         }
+      } else if (trimmed.startsWith('for ') && trimmed.includes(' in ')) {
+        hasExecutedConditional = true;
+        let forMatch = trimmed.match(/^for\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+(.+):$/);
+        if (!forMatch) {
+          return {
+            success: false,
+            error: `Erro de Sintaxe (Linha ${lineNum}): Comando 'for' mal formatado. Use 'for variavel in iteravel:'`,
+            lineNum
+          };
+        }
+        let iterator = forMatch[1];
+        let iterable = forMatch[2].trim();
+        let rangeMatch = iterable.match(/^range\(([^,]+)(?:,\s*([^,]+))?\)$/);
+        
+        if (!(iterator in env)) {
+          env[iterator] = undefined;
+        }
+
+        if (rangeMatch) {
+          let start = rangeMatch[2] ? rangeMatch[1].trim() : '0';
+          let end = rangeMatch[2] ? rangeMatch[2].trim() : rangeMatch[1].trim();
+          lineJs = `for (let ${iterator} = ${translateCondition(start)}; ${iterator} < ${translateCondition(end)}; ${iterator}++) {\n`;
+        } else {
+          lineJs = `for (let ${iterator} of ${translateCondition(iterable)}) {\n`;
+        }
       } else if (trimmed === 'else:') {
         hasExecutedConditional = true;
         lineJs = `else {\n`;

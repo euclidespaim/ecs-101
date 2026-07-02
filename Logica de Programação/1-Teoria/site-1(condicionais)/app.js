@@ -1,5 +1,6 @@
 // Estado global da aplicação
 const STATE = {
+  currentModule: 'condicionais',
   currentTab: 'home',
   progress: {
     theoryRead: [], // IDs dos conceitos lidos
@@ -21,6 +22,12 @@ const STATE = {
     nota: 7.5,
     chuva: false,
     energia: 80
+  },
+  exam: {
+    activeQ: 1
+  },
+  recovery: {
+    activeQ: 1
   }
 };
 
@@ -33,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupQuiz();
   setupChallenges();
   setupExam();
+  setupRecovery();
   updateProgressUI();
 });
 
@@ -56,7 +64,14 @@ function loadProgress() {
         examName2: parsed.examName2 || "",
         examSubmitted: parsed.examSubmitted || false,
         examCodes: parsed.examCodes || {},
-        examResults: parsed.examResults || {}
+        examResults: parsed.examResults || {},
+        // Propriedades da Recuperação 1
+        recoveryUnlocked: parsed.recoveryUnlocked || false,
+        recoveryName1: parsed.recoveryName1 || "",
+        recoveryName2: parsed.recoveryName2 || "",
+        recoverySubmitted: parsed.recoverySubmitted || false,
+        recoveryCodes: parsed.recoveryCodes || {},
+        recoveryResults: parsed.recoveryResults || {}
       };
     } catch (e) {
       console.error("Erro ao ler progresso do localStorage", e);
@@ -76,7 +91,14 @@ function loadProgress() {
       examName2: "",
       examSubmitted: false,
       examCodes: {},
-      examResults: {}
+      examResults: {},
+      // Propriedades da Recuperação 1
+      recoveryUnlocked: false,
+      recoveryName1: "",
+      recoveryName2: "",
+      recoverySubmitted: false,
+      recoveryCodes: {},
+      recoveryResults: {}
     };
   }
 }
@@ -101,7 +123,13 @@ function resetProgress() {
       examName2: "",
       examSubmitted: false,
       examCodes: {},
-      examResults: {}
+      examResults: {},
+      recoveryUnlocked: false,
+      recoveryName1: "",
+      recoveryName2: "",
+      recoverySubmitted: false,
+      recoveryCodes: {},
+      recoveryResults: {}
     };
     saveProgress();
     // Reinicia estados locais
@@ -114,6 +142,7 @@ function resetProgress() {
     setupQuiz();
     setupChallenges();
     setupExam();
+    setupRecovery();
     const nameInput = document.getElementById('student-name-input');
     if (nameInput) nameInput.value = "";
     renderPerformanceReport();
@@ -180,6 +209,92 @@ function updateProgressUI() {
 }
 
 // --- NAVEGAÇÃO ENTRE ABAS ---
+
+function loadModule(moduleId) {
+  STATE.currentModule = moduleId;
+  
+  // Atualiza sidebar
+  document.querySelectorAll('.accordion-item').forEach(btn => btn.classList.remove('active'));
+  const btn = document.getElementById(`module-btn-${moduleId}`);
+  if (btn) btn.classList.add('active');
+  
+  const currentData = MODULES_DATA[moduleId];
+  if (!currentData) return;
+  
+  // Atualiza Header
+  const titleParts = currentData.title.split(' ');
+  const spanText = titleParts.length > 1 ? titleParts[titleParts.length - 1] : '';
+  const mainText = titleParts.slice(0, titleParts.length - 1).join(' ');
+  
+  const h1 = document.querySelector('.logo-section h1');
+  if (h1) h1.innerHTML = `🐍 ${mainText} <span>${spanText}</span>`;
+  
+  const p = document.querySelector('.logo-section p');
+  if (p) p.innerText = currentData.subtitle;
+  
+  // Atualiza Home
+  const intro = document.querySelector('.welcome-box p.intro-text');
+  if (intro && currentData.theory) intro.innerHTML = currentData.theory.introduction;
+  
+  // Atualiza Teoria (Dinamicamente)
+  buildTheoryUI(currentData);
+  
+  // Reseta Quiz e Desafios
+  setupQuiz();
+  setupChallenges();
+  
+  // Alterna Simulador
+  if (moduleId === 'condicionais') {
+    document.getElementById('sim-if-view').style.display = 'grid';
+    document.getElementById('sim-for-view').style.display = 'none';
+  } else {
+    document.getElementById('sim-if-view').style.display = 'none';
+    document.getElementById('sim-for-view').style.display = 'grid';
+  }
+}
+
+function buildTheoryUI(currentData) {
+  const theoryNav = document.querySelector('.theory-nav');
+  const theoryGridTexts = document.querySelector('.theory-grid > div:first-child');
+  const introText = document.getElementById('theory-intro-text');
+  
+  if (!theoryNav || !theoryGridTexts || !currentData.theory) return;
+  
+  introText.innerHTML = currentData.theory.introduction;
+  
+  let navHtml = '';
+  let contentHtml = '';
+  
+  currentData.theory.concepts.forEach((concept, idx) => {
+    const activeClass = idx === 0 ? 'active' : '';
+    navHtml += `<button class="theory-tab-btn ${activeClass}" data-concept="${concept.id}" id="theory-btn-${concept.id}">${concept.title.split('. ')[1] || concept.title}</button>`;
+    
+    contentHtml += `
+      <div id="theory-content-${concept.id}" class="theory-body-content ${activeClass}">
+        <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">${concept.title}</h3>
+        <p style="margin-bottom: 1rem; color: #334155;">${concept.description}</p>
+        <p class="code-snippet" style="margin-bottom: 1rem;">${concept.example.replace(/\n/g, '<br>')}</p>
+        <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+          ${concept.analogy}
+        </div>
+      </div>
+    `;
+  });
+  
+  if (currentData.theory.indentationNotice) {
+    contentHtml += `
+      <div style="margin-top: 1.5rem; background-color: var(--color-warning-bg); color: #92400E; padding: 1rem; border-radius: var(--border-radius-sm); font-size: 0.9rem; border-left: 4px solid var(--color-warning);">
+        ${currentData.theory.indentationNotice}
+      </div>
+    `;
+  }
+  
+  theoryNav.innerHTML = navHtml;
+  theoryGridTexts.innerHTML = contentHtml;
+  
+  setupTheoryInteractivity();
+}
+
 function setupNavigation() {
   const tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(tab => {
@@ -219,6 +334,8 @@ function switchTab(tabId) {
     renderPerformanceReport();
   } else if (tabId === 'exam') {
     refreshExamUI();
+  } else if (tabId === 'recovery') {
+    refreshRecoveryUI();
   }
 }
 
@@ -233,7 +350,8 @@ function setupTheoryInteractivity() {
   });
   
   // Carrega o primeiro conceito
-  switchTheoryConcept('if');
+  const firstConcept = MODULES_DATA[STATE.currentModule].theory.concepts[0];
+  if (firstConcept) switchTheoryConcept(firstConcept.id);
 }
 
 function switchTheoryConcept(conceptId) {
@@ -271,7 +389,33 @@ function renderTheoryFlowchart(conceptId) {
   
   let html = '';
   
-  if (conceptId === 'if') {
+  
+  if (conceptId === 'for_intro' || conceptId === 'for_range' || conceptId === 'for_range_params' || conceptId === 'for_list') {
+    html = `
+      <div class="flowchart-container">
+        <div class="flow-node active">Início do Laço</div>
+        <div class="flow-arrow active"></div>
+        <div class="flow-node diamond active">Ainda tem itens na sequência?</div>
+        
+        <div class="flow-branch-container">
+          <div class="flow-branch">
+            <span class="branch-label yes">SIM</span>
+            <div class="flow-arrow active"></div>
+            <div class="flow-node active" style="border-color: var(--color-success)">Pega próximo item<br>Executa bloco indentado</div>
+            <div style="width: 2px; height: 30px; background-color: var(--accent-teal); margin: 0 auto;"></div>
+            <div style="border-top: 2px dashed var(--accent-teal); border-left: 2px dashed var(--accent-teal); width: 120px; height: 130px; position: absolute; left: -100px; top: 120px; border-top-left-radius: 10px;"></div>
+            <div style="position: absolute; left: 15px; top: 110px; font-size: 0.8rem; color: var(--accent-teal); font-weight: bold;">VOLTA AO INÍCIO</div>
+          </div>
+          <div class="flow-branch">
+            <span class="branch-label no">NÃO</span>
+            <div class="flow-arrow"></div>
+            <div class="flow-node" style="color: var(--text-light); background-color: #F1F5F9;">Fim do laço<br>Continua o programa</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else 
+if (conceptId === 'if') {
     html = `
       <div class="flowchart-container">
         <div class="flow-node active">Início do Programa</div>
@@ -533,7 +677,7 @@ function runSimulatorLogic() {
 
 // --- ABA QUIZ ---
 function setupQuiz() {
-  if (SITE_DATA.quiz.length === 0) return;
+  if (MODULES_DATA[STATE.currentModule].quiz.length === 0) return;
   STATE.quiz.currentQuestionIndex = 0;
   STATE.quiz.answers = [];
   STATE.quiz.hasAnsweredCurrent = false;
@@ -545,8 +689,8 @@ function renderQuizQuestion() {
   const container = document.getElementById('quiz-container');
   if (!container) return;
   
-  const question = SITE_DATA.quiz[STATE.quiz.currentQuestionIndex];
-  const total = SITE_DATA.quiz.length;
+  const question = MODULES_DATA[STATE.currentModule].quiz[STATE.quiz.currentQuestionIndex];
+  const total = MODULES_DATA[STATE.currentModule].quiz.length;
   
   // Renderiza cabeçalho, pergunta e código de suporte
   let codeHtml = "";
@@ -606,7 +750,7 @@ function renderQuizQuestion() {
 
 function selectQuizOption(selectedIdx, element) {
   STATE.quiz.hasAnsweredCurrent = true;
-  const question = SITE_DATA.quiz[STATE.quiz.currentQuestionIndex];
+  const question = MODULES_DATA[STATE.currentModule].quiz[STATE.quiz.currentQuestionIndex];
   const correctIdx = question.correctAnswer;
   
   STATE.quiz.answers.push(selectedIdx);
@@ -633,7 +777,7 @@ function selectQuizOption(selectedIdx, element) {
 }
 
 function advanceQuiz() {
-  const total = SITE_DATA.quiz.length;
+  const total = MODULES_DATA[STATE.currentModule].quiz.length;
   
   if (STATE.quiz.currentQuestionIndex < total - 1) {
     STATE.quiz.currentQuestionIndex++;
@@ -654,7 +798,7 @@ function finishQuiz() {
   
   // Calcula pontuação
   let correctCount = 0;
-  SITE_DATA.quiz.forEach((q, idx) => {
+  MODULES_DATA[STATE.currentModule].quiz.forEach((q, idx) => {
     if (STATE.quiz.answers[idx] === q.correctAnswer) {
       correctCount++;
     }
@@ -674,7 +818,7 @@ function finishQuiz() {
       <div class="success-badge-large">🧠</div>
       <h2 class="card-title" style="font-size: 2rem; margin-top: 1rem;">Quiz Concluído!</h2>
       <p style="font-size: 1.2rem; color: var(--text-light); margin-bottom: 1.5rem;">
-        Você acertou <strong>${correctCount}</strong> de <strong>${SITE_DATA.quiz.length}</strong> perguntas.
+        Você acertou <strong>${correctCount}</strong> de <strong>${MODULES_DATA[STATE.currentModule].quiz.length}</strong> perguntas.
       </p>
       
       <div class="quiz-feedback ${scoreClass}" style="display: block; max-width: 500px; margin: 0 auto 2rem; text-align: left;">
@@ -701,7 +845,7 @@ function setupChallenges() {
   
   // Gera lista lateral de desafios
   let html = "";
-  SITE_DATA.exercises.forEach(ex => {
+  MODULES_DATA[STATE.currentModule].exercises.forEach(ex => {
     const isCompleted = STATE.progress.completedLevels.includes(ex.level);
     const completedClass = isCompleted ? 'completed' : '';
     const activeClass = ex.level === STATE.challenges.currentLevel ? 'active' : '';
@@ -743,7 +887,7 @@ function selectChallenge(level) {
 }
 
 function loadChallenge(level) {
-  const ex = SITE_DATA.exercises.find(e => e.level === level);
+  const ex = MODULES_DATA[STATE.currentModule].exercises.find(e => e.level === level);
   if (!ex) return;
   
   const descTitle = document.getElementById('chal-title');
@@ -782,7 +926,7 @@ function onCodeEditorInput(value) {
 
 function resetChallengeCode() {
   const level = STATE.challenges.currentLevel;
-  const ex = SITE_DATA.exercises.find(e => e.level === level);
+  const ex = MODULES_DATA[STATE.currentModule].exercises.find(e => e.level === level);
   if (ex && confirm("Deseja voltar o código para o estado original?")) {
     document.getElementById('chal-code-editor').value = ex.starterCode;
     STATE.challenges.userCodes[level] = ex.starterCode;
@@ -792,7 +936,7 @@ function resetChallengeCode() {
 
 function runAndValidateCode() {
   const level = STATE.challenges.currentLevel;
-  const ex = SITE_DATA.exercises.find(e => e.level === level);
+  const ex = MODULES_DATA[STATE.currentModule].exercises.find(e => e.level === level);
   const code = document.getElementById('chal-code-editor').value;
   
   // Salva no estado
@@ -908,7 +1052,7 @@ function runAndValidateCode() {
     }
     
     // Adiciona botão para avançar para o próximo desafio
-    const isLast = level === SITE_DATA.exercises.length;
+    const isLast = level === MODULES_DATA[STATE.currentModule].exercises.length;
     if (!isLast) {
       resultsPanel.innerHTML += `
         <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
@@ -1198,7 +1342,7 @@ function setupExam() {
   
   // Limpa e gera lista lateral de questões
   let html = "";
-  SITE_DATA.exam.forEach(q => {
+  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
     const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
     const completedClass = isCompleted ? 'completed' : '';
     const activeClass = q.id === STATE.exam.activeQ ? 'active' : '';
@@ -1436,7 +1580,7 @@ function selectExamQuestion(qId) {
 }
 
 function loadExamQuestion(qId) {
-  const q = SITE_DATA.exam.find(item => item.id === qId);
+  const q = MODULES_DATA[STATE.currentModule].exam.find(item => item.id === qId);
   if (!q) return;
   
   const qTitle = document.getElementById('exam-q-title');
@@ -1475,7 +1619,7 @@ function onExamCodeInput(code) {
 
 function resetExamCode() {
   const qId = STATE.exam.activeQ;
-  const q = SITE_DATA.exam.find(item => item.id === qId);
+  const q = MODULES_DATA[STATE.currentModule].exam.find(item => item.id === qId);
   
   if (q && confirm("Deseja voltar o código desta questão para o estado original?")) {
     const editor = document.getElementById('exam-code-editor');
@@ -1500,7 +1644,7 @@ function resetExamCode() {
 
 function runAndValidateExamCode() {
   const qId = STATE.exam.activeQ;
-  const q = SITE_DATA.exam.find(item => item.id === qId);
+  const q = MODULES_DATA[STATE.currentModule].exam.find(item => item.id === qId);
   const editor = document.getElementById('exam-code-editor');
   
   if (!q || !editor) return;
@@ -1639,7 +1783,7 @@ function openExamReview() {
   `;
   
   let html = "";
-  SITE_DATA.exam.forEach(q => {
+  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
     const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
     const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
     
@@ -1703,15 +1847,15 @@ function generateExamReportText() {
   report += `--------------------------------------------------\n`;
   
   let totalCorrect = 0;
-  SITE_DATA.exam.forEach(q => {
+  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
     const passed = STATE.progress.examResults && STATE.progress.examResults[q.id];
     if (passed) totalCorrect++;
   });
   
-  report += `Questões Resolvidas: ${totalCorrect} de ${SITE_DATA.exam.length}\n`;
-  report += `Nota Estimada: ${(totalCorrect / SITE_DATA.exam.length * 10).toFixed(1)} / 10.0\n\n`;
+  report += `Questões Resolvidas: ${totalCorrect} de ${MODULES_DATA[STATE.currentModule].exam.length}\n`;
+  report += `Nota Estimada: ${(totalCorrect / MODULES_DATA[STATE.currentModule].exam.length * 10).toFixed(1)} / 10.0\n\n`;
   
-  SITE_DATA.exam.forEach(q => {
+  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
     const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
     const passed = STATE.progress.examResults && STATE.progress.examResults[q.id] ? "PASSOU EM TODOS OS TESTES" : "NÃO PASSOU OU NÃO TESTADO";
     
@@ -1951,6 +2095,594 @@ async function resetEntireExam() {
 }
 window.resetEntireExam = resetEntireExam;
 
+// --- SISTEMA DA AVALIAÇÃO DE RECUPERAÇÃO ---
+
+function setupRecovery() {
+  const listContainer = document.getElementById('recovery-list-container');
+  if (!listContainer) return;
+  
+  // Limpa e gera lista lateral de questões
+  let html = "";
+  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
+    const isCompleted = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id];
+    const completedClass = isCompleted ? 'completed' : '';
+    const activeClass = q.id === STATE.recovery.activeQ ? 'active' : '';
+    
+    html += `
+      <button class="challenge-item ${activeClass} ${completedClass}" id="recovery-item-${q.id}" onclick="selectRecoveryQuestion(${q.id})">
+        Questão ${q.id}: ${q.name.split(':')[1].trim()}
+      </button>
+    `;
+  });
+  listContainer.innerHTML = html;
+  
+  // Carrega os nomes se já estiverem salvos
+  const nameInput1 = document.getElementById('recovery-student-name-1');
+  const nameInput2 = document.getElementById('recovery-student-name-2');
+  if (nameInput1) nameInput1.value = STATE.progress.recoveryName1 || "";
+  if (nameInput2) nameInput2.value = STATE.progress.recoveryName2 || "";
+
+  // Habilita inserção de Tab como 4 espaços
+  enableTabKeyPress('recovery-code-editor', onRecoveryCodeInput);
+}
+
+async function unlockRecovery() {
+  const pwdInput = document.getElementById('recovery-password-input');
+  const errorDiv = document.getElementById('recovery-auth-error');
+  
+  if (!pwdInput) return;
+  
+  const enteredPassword = pwdInput.value.trim();
+  const hash = await sha256(enteredPassword);
+  
+  // Hash correspondente a "professor101"
+  const expectedHash = "08c27d176d710371afef9924eb32c012803eef04a6647d3febf69422f27a294b";
+  
+  if (hash === expectedHash) {
+    STATE.progress.recoveryUnlocked = true;
+    if (errorDiv) errorDiv.style.display = 'none';
+    saveProgress();
+    refreshRecoveryUI();
+  } else {
+    if (errorDiv) errorDiv.style.display = 'block';
+    pwdInput.value = "";
+    pwdInput.focus();
+  }
+}
+
+function refreshRecoveryUI() {
+  const authCard = document.getElementById('recovery-auth-card');
+  const contentCard = document.getElementById('recovery-content-card');
+  const successCard = document.getElementById('recovery-success-card');
+  const questionsArea = document.getElementById('recovery-questions-area');
+  const nameInput1 = document.getElementById('recovery-student-name-1');
+  const nameInput2 = document.getElementById('recovery-student-name-2');
+  
+  if (!authCard || !contentCard) return;
+  
+  // Se o aluno já concluiu/enviou a recuperação, pula direto para a tela de sucesso
+  if (STATE.progress.recoverySubmitted) {
+    authCard.style.display = 'none';
+    contentCard.style.display = 'none';
+    if (successCard) successCard.style.display = 'block';
+    
+    const textarea = document.getElementById('recovery-report-text-copy');
+    if (textarea) textarea.value = generateRecoveryReportText();
+    return;
+  }
+  
+  if (STATE.progress.recoveryUnlocked) {
+    authCard.style.display = 'none';
+    contentCard.style.display = 'block';
+    if (successCard) successCard.style.display = 'none';
+    
+    const name1 = STATE.progress.recoveryName1 || "";
+    const name2 = STATE.progress.recoveryName2 || "";
+    if (nameInput1) nameInput1.value = name1;
+    if (nameInput2) nameInput2.value = name2;
+    
+    if (name1.trim().length > 2) {
+      if (questionsArea) questionsArea.style.display = 'block';
+      loadRecoveryQuestion(STATE.recovery.activeQ);
+    } else {
+      if (questionsArea) questionsArea.style.display = 'none';
+    }
+  } else {
+    authCard.style.display = 'block';
+    contentCard.style.display = 'none';
+    if (successCard) successCard.style.display = 'none';
+  }
+}
+
+function onRecoveryNameChange() {
+  const name1 = document.getElementById('recovery-student-name-1').value;
+  const name2 = document.getElementById('recovery-student-name-2').value;
+  
+  STATE.progress.recoveryName1 = name1;
+  STATE.progress.recoveryName2 = name2;
+  saveProgress();
+  
+  const questionsArea = document.getElementById('recovery-questions-area');
+  if (name1.trim().length > 2) {
+    if (questionsArea) questionsArea.style.display = 'block';
+    loadRecoveryQuestion(STATE.recovery.activeQ);
+  } else {
+    if (questionsArea) questionsArea.style.display = 'none';
+  }
+}
+
+function selectRecoveryQuestion(qId) {
+  STATE.recovery.activeQ = qId;
+  
+  // Atualiza botões laterais
+  document.querySelectorAll('#recovery-list-container .challenge-item').forEach(btn => {
+    const btnId = parseInt(btn.id.replace('recovery-item-', ''));
+    btn.classList.remove('active');
+    if (btnId === qId) {
+      btn.classList.add('active');
+    }
+  });
+  
+  loadRecoveryQuestion(qId);
+}
+
+function loadRecoveryQuestion(qId) {
+  const q = MODULES_DATA[STATE.currentModule].recovery.find(item => item.id === qId);
+  if (!q) return;
+  
+  const qTitle = document.getElementById('recovery-q-title');
+  const qDesc = document.getElementById('recovery-q-description');
+  const editor = document.getElementById('recovery-code-editor');
+  const resultsPanel = document.getElementById('recovery-results-panel');
+  
+  if (qTitle && qDesc && editor) {
+    qTitle.innerHTML = q.name;
+    qDesc.innerHTML = q.description;
+    
+    // Carrega o código do estado ou inicial
+    if (STATE.progress.recoveryCodes && STATE.progress.recoveryCodes[qId] !== undefined) {
+      editor.value = STATE.progress.recoveryCodes[qId];
+    } else {
+      editor.value = q.starterCode;
+    }
+    
+    // Atualiza destaque
+    const pre = editor.nextElementSibling;
+    if (pre) {
+      updateEditorHighlight(editor, pre);
+    }
+  }
+  
+  if (resultsPanel) {
+    resultsPanel.classList.remove('visible');
+  }
+}
+
+function onRecoveryCodeInput(code) {
+  if (!STATE.progress.recoveryCodes) STATE.progress.recoveryCodes = {};
+  STATE.progress.recoveryCodes[STATE.recovery.activeQ] = code;
+  saveProgress();
+}
+
+function resetRecoveryCode() {
+  const qId = STATE.recovery.activeQ;
+  const q = MODULES_DATA[STATE.currentModule].recovery.find(item => item.id === qId);
+  
+  if (q && confirm("Deseja voltar o código desta questão para o estado original?")) {
+    const editor = document.getElementById('recovery-code-editor');
+    if (editor) editor.value = q.starterCode;
+    
+    if (!STATE.progress.recoveryCodes) STATE.progress.recoveryCodes = {};
+    STATE.progress.recoveryCodes[qId] = q.starterCode;
+    
+    if (STATE.progress.recoveryResults) {
+      delete STATE.progress.recoveryResults[qId];
+    }
+    
+    saveProgress();
+    
+    const btn = document.getElementById(`recovery-item-${qId}`);
+    if (btn) btn.classList.remove('completed');
+    
+    const resultsPanel = document.getElementById('recovery-results-panel');
+    if (resultsPanel) resultsPanel.classList.remove('visible');
+  }
+}
+
+function runAndValidateRecoveryCode() {
+  const qId = STATE.recovery.activeQ;
+  const q = MODULES_DATA[STATE.currentModule].recovery.find(item => item.id === qId);
+  const editor = document.getElementById('recovery-code-editor');
+  
+  if (!q || !editor) return;
+  
+  const code = editor.value;
+  if (!STATE.progress.recoveryCodes) STATE.progress.recoveryCodes = {};
+  STATE.progress.recoveryCodes[qId] = code;
+  
+  const resultsPanel = document.getElementById('recovery-results-panel');
+  if (!resultsPanel) return;
+  
+  resultsPanel.classList.add('visible');
+  resultsPanel.innerHTML = "";
+  
+  let allPass = true;
+  let testCaseResults = [];
+  let compileError = null;
+  
+  for (let test of q.testCases) {
+    const result = runPython(code, test.setupVariables);
+    
+    if (!result.success) {
+      compileError = result.error;
+      allPass = false;
+      break;
+    }
+    
+    const actual = result.output.trim();
+    const expected = test.expectedOutput.trim();
+    const isPass = actual === expected;
+    
+    if (!isPass) {
+      allPass = false;
+    }
+    
+    testCaseResults.push({
+      label: test.label,
+      setup: test.setupVariables,
+      expected: expected,
+      actual: actual,
+      pass: isPass
+    });
+  }
+  
+  if (compileError) {
+    resultsPanel.innerHTML = `
+      <div class="results-header" style="color: var(--color-error)">
+        ⚠️ Erro Encontrado no Código:
+      </div>
+      <div class="compiler-error-box">${compileError}</div>
+      <p style="font-size: 0.9rem; color: var(--text-light);">
+        Revise seu código, corrija as regras de indentação do Python e tente novamente.
+      </p>
+    `;
+    return;
+  }
+  
+  let headerColor = allPass ? 'var(--color-success)' : 'var(--color-error)';
+  let headerText = allPass ? '🎉 Parabéns! Código validado com sucesso!' : '❌ Ops! Seu código falhou em alguns testes de validação.';
+  
+  let rowsHtml = testCaseResults.map((res, idx) => {
+    let rowClass = res.pass ? 'pass' : 'fail';
+    let indicatorClass = res.pass ? 'pass' : 'fail';
+    let indicatorText = res.pass ? 'SUCESSO' : 'FALHOU';
+    
+    let varsStr = Object.entries(res.setup).map(([k, v]) => `${k} = ${typeof v === 'string' ? `'${v}'` : (v === true ? 'True' : (v === false ? 'False' : v))}`).join(', ');
+    
+    return `
+      <div class="test-case-row ${rowClass}">
+        <div class="test-case-info">
+          <span class="status-indicator ${indicatorClass}">${indicatorText}</span>
+          <strong>${res.label}</strong> <span style="color: var(--text-light); font-size: 0.85rem;">(Entrada: ${varsStr})</span>
+        </div>
+        <button class="toggle-details-btn" onclick="toggleTestDetails(${idx})">Ver Detalhes</button>
+        
+        <div id="test-details-${idx}" class="test-case-details">
+          <div><strong>Saída Esperada:</strong></div>
+          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0;">${res.expected || '(Vazio)'}</pre>
+          <div><strong>Saída do Seu Código:</strong></div>
+          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0; color: ${res.pass ? 'green' : 'red'};">${res.actual || '(Vazio)'}</pre>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  resultsPanel.innerHTML = `
+    <div class="results-header" style="color: ${headerColor}">
+      ${headerText}
+    </div>
+    <div class="test-cases-summary">
+      ${rowsHtml}
+    </div>
+  `;
+  
+  // Atualiza resultados no estado
+  if (!STATE.progress.recoveryResults) STATE.progress.recoveryResults = {};
+  STATE.progress.recoveryResults[qId] = allPass;
+  saveProgress();
+  
+  // Atualiza botão lateral
+  const btn = document.getElementById(`recovery-item-${qId}`);
+  if (btn) {
+    if (allPass) {
+      btn.classList.add('completed');
+    } else {
+      btn.classList.remove('completed');
+    }
+  }
+}
+
+function openRecoveryReview() {
+  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
+  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
+  
+  if (name1.length < 3) {
+    alert("Por favor, preencha o nome do Integrante 1 antes de revisar a prova de recuperação!");
+    return;
+  }
+  
+  const modal = document.getElementById('recovery-review-modal');
+  const infoDiv = document.getElementById('recovery-review-student-info');
+  const listDiv = document.getElementById('recovery-review-questions-list');
+  
+  if (!modal || !infoDiv || !listDiv) return;
+  
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
+  infoDiv.innerHTML = `
+    <div style="font-size: 1.1rem; color: var(--text-main);">
+      Integrantes: <strong style="color: var(--primary-navy);">${nameStr}</strong>
+    </div>
+    <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
+      Código de Acesso Utilizado: <code>${STATE.progress.recoveryUnlocked ? 'ecs101' : 'Não autenticado'}</code>
+    </div>
+  `;
+  
+  let html = "";
+  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
+    const code = STATE.progress.recoveryCodes && STATE.progress.recoveryCodes[q.id] ? STATE.progress.recoveryCodes[q.id] : q.starterCode;
+    const isCompleted = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id];
+    
+    let statusBadge = `<span class="status-indicator fail">FALHANDO OU NÃO TESTADO</span>`;
+    if (isCompleted) {
+      statusBadge = `<span class="status-indicator pass">VALIDADO COM SUCESSO (PASSOU NOS TESTES)</span>`;
+    }
+    
+    html += `
+      <div class="review-q-item">
+        <div class="review-q-header">
+          <span>${q.name}</span>
+          ${statusBadge}
+        </div>
+        <div class="review-q-body">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-light);">Código Desenvolvido:</div>
+          <pre class="review-q-code">${escapeHtml(code)}</pre>
+        </div>
+      </div>
+    `;
+  });
+  listDiv.innerHTML = html;
+  
+  // Adapta os botões de rodapé caso já tenha sido enviado (evita múltiplos envios de e-mail ao reabrir o relatório)
+  const submitBtn = modal.querySelector('.modal-footer .primary-btn');
+  const cancelBtn = modal.querySelector('.modal-footer .btn-secondary');
+  if (STATE.progress.recoverySubmitted) {
+    if (submitBtn) submitBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.innerText = 'Fechar';
+  } else {
+    if (submitBtn) submitBtn.style.display = 'flex';
+    if (cancelBtn) cancelBtn.innerText = 'Voltar à Prova';
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function closeRecoveryReview() {
+  const modal = document.getElementById('recovery-review-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function generateRecoveryReportText() {
+  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
+  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " & " + name2;
+  if (!nameStr) nameStr = "Sem identificação";
+  
+  const date = new Date().toLocaleString('pt-BR');
+  
+  let report = `==================================================\n`;
+  report += `RELATÓRIO DE RECUPERAÇÃO - CONDICIONAIS 101\n`;
+  report += `==================================================\n\n`;
+  report += `Alunos/Dupla: ${nameStr}\n`;
+  report += `Data de Entrega: ${date}\n`;
+  report += `Repositório: https://github.com/euclidespaim/ecs-101\n\n`;
+  
+  report += `--------------------------------------------------\n`;
+  report += `DESEMPENHO GERAL:\n`;
+  report += `--------------------------------------------------\n`;
+  
+  let totalCorrect = 0;
+  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
+    const passed = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id];
+    if (passed) totalCorrect++;
+  });
+  
+  report += `Questões Resolvidas: ${totalCorrect} de ${MODULES_DATA[STATE.currentModule].recovery.length}\n`;
+  report += `Nota Estimada: ${(totalCorrect / MODULES_DATA[STATE.currentModule].recovery.length * 10).toFixed(1)} / 10.0\n\n`;
+  
+  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
+    const code = STATE.progress.recoveryCodes && STATE.progress.recoveryCodes[q.id] ? STATE.progress.recoveryCodes[q.id] : q.starterCode;
+    const passed = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id] ? "PASSOU EM TODOS OS TESTES" : "NÃO PASSOU OU NÃO TESTADO";
+    
+    report += `==================================================\n`;
+    report += `${q.name}\n`;
+    report += `Status: ${passed}\n`;
+    report += `--------------------------------------------------\n`;
+    report += `CÓDIGO ENVIADO:\n`;
+    report += `--------------------------------------------------\n`;
+    report += `${code}\n`;
+    report += `==================================================\n\n`;
+  });
+  
+  return report;
+}
+
+function submitRecoveryFinal() {
+  // Marca como submetido e salva
+  STATE.progress.recoverySubmitted = true;
+  saveProgress();
+  
+  const reportText = generateRecoveryReportText();
+  
+  // Atualiza textarea da cópia
+  const textarea = document.getElementById('recovery-report-text-copy');
+  if (textarea) textarea.value = reportText;
+  
+  // Fecha o modal de revisão
+  closeRecoveryReview();
+  
+  // Mostra a tela de sucesso
+  const contentCard = document.getElementById('recovery-content-card');
+  const successCard = document.getElementById('recovery-success-card');
+  if (contentCard && successCard) {
+    contentCard.style.display = 'none';
+    successCard.style.display = 'block';
+  }
+
+  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
+  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
+  const subjectText = `Prova de Recuperação - ${nameStr}`;
+
+  // Verifica se o EmailJS está configurado
+  if (EMAILJS_CONFIG.templateId && EMAILJS_CONFIG.templateId !== "YOUR_TEMPLATE_ID" &&
+      EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== "YOUR_PUBLIC_KEY") {
+    // Tenta envio automático silencioso em segundo plano
+    sendEmailViaEmailJS(subjectText, reportText, nameStr);
+  } else {
+    // Fallback: abre cliente de e-mail tradicional em nova guia
+    fallbackMailto(subjectText, reportText);
+  }
+}
+
+function retryMailtoRecoverySubmit() {
+  const reportText = generateRecoveryReportText();
+  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
+  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
+  let nameStr = name1;
+  if (name2) nameStr += " e " + name2;
+  
+  const subjectText = `Prova de Recuperação - ${nameStr}`;
+  fallbackMailto(subjectText, reportText);
+}
+
+function copyRecoveryReportToClipboard() {
+  const textarea = document.getElementById('recovery-report-text-copy');
+  if (!textarea) return;
+  
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // Para mobile
+  
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    const copyBtn = document.getElementById('recovery-copy-btn');
+    if (copyBtn) {
+      copyBtn.innerText = "Copiado! ✓";
+      copyBtn.style.backgroundColor = "var(--color-success-bg)";
+      copyBtn.style.color = "#065F46";
+      copyBtn.style.borderColor = "var(--color-success)";
+      
+      setTimeout(() => {
+        copyBtn.innerText = "Copiar Relatório 📋";
+        copyBtn.style.backgroundColor = "";
+        copyBtn.style.color = "";
+        copyBtn.style.borderColor = "";
+      }, 2500);
+    }
+  }).catch(err => {
+    alert("Falha ao copiar automaticamente: " + err);
+  });
+}
+
+function downloadRecoveryReportAsTxt() {
+  const reportText = generateRecoveryReportText();
+  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim().replace(/\s+/g, "_") : "recuperacao";
+  const name2 = STATE.progress.recoveryName2 ? "_" + STATE.progress.recoveryName2.trim().replace(/\s+/g, "_") : "";
+  const filename = `recuperacao_1_${name1}${name2}.txt`;
+  
+  const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+async function resetSubmittedRecovery() {
+  const password = prompt("Digite a senha do professor para liberar uma nova tentativa de envio da recuperação:");
+  if (password === null) return;
+  
+  const hash = await sha256(password.trim());
+  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3"; // "liberar101"
+  
+  if (hash === expectedHash) {
+    STATE.progress.recoverySubmitted = false;
+    saveProgress();
+    alert("Recuperação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los.");
+    refreshRecoveryUI();
+  } else {
+    alert("Senha incorreta!");
+  }
+}
+
+async function resetEntireRecovery() {
+  const password = prompt("Digite a senha do professor para RESETAR COMPLETAMENTE a recuperação (apaga nomes e códigos):");
+  if (password === null) return;
+  
+  const hash = await sha256(password.trim());
+  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3"; // "liberar101"
+  
+  if (hash === expectedHash) {
+    STATE.progress.recoveryUnlocked = false;
+    STATE.progress.recoverySubmitted = false;
+    STATE.progress.recoveryName1 = "";
+    STATE.progress.recoveryName2 = "";
+    STATE.progress.recoveryCodes = {};
+    STATE.progress.recoveryResults = {};
+    saveProgress();
+    
+    // Limpa campos na UI
+    const nameInput1 = document.getElementById('recovery-student-name-1');
+    const nameInput2 = document.getElementById('recovery-student-name-2');
+    if (nameInput1) nameInput1.value = "";
+    if (nameInput2) nameInput2.value = "";
+    
+    const pwdInput = document.getElementById('recovery-password-input');
+    if (pwdInput) pwdInput.value = "";
+    
+    alert("Prova de recuperação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados.");
+    refreshRecoveryUI();
+  } else {
+    alert("Senha incorreta!");
+  }
+}
+
+// Vincula funções da Recuperação ao escopo global (window)
+window.unlockRecovery = unlockRecovery;
+window.onRecoveryNameChange = onRecoveryNameChange;
+window.selectRecoveryQuestion = selectRecoveryQuestion;
+window.onRecoveryCodeInput = onRecoveryCodeInput;
+window.resetRecoveryCode = resetRecoveryCode;
+window.runAndValidateRecoveryCode = runAndValidateRecoveryCode;
+window.openRecoveryReview = openRecoveryReview;
+window.closeRecoveryReview = closeRecoveryReview;
+window.submitRecoveryFinal = submitRecoveryFinal;
+window.copyRecoveryReportToClipboard = copyRecoveryReportToClipboard;
+window.downloadRecoveryReportAsTxt = downloadRecoveryReportAsTxt;
+window.retryMailtoRecoverySubmit = retryMailtoRecoverySubmit;
+window.setupRecovery = setupRecovery;
+window.refreshRecoveryUI = refreshRecoveryUI;
+window.resetSubmittedRecovery = resetSubmittedRecovery;
+window.resetEntireRecovery = resetEntireRecovery;
+
 // --- SISTEMA DE DESTAQUE DE SINTAXE PYTHON (VS CODE STYLE) ---
 function highlightPython(code) {
   let html = escapeHtml(code);
@@ -2060,3 +2792,74 @@ function enableTabKeyPress(textareaId, onInputCallback) {
 
 window.syncEditorScroll = syncEditorScroll;
 window.updateEditorHighlight = updateEditorHighlight;
+
+
+// --- SIMULADOR DO FOR ---
+function runForSimulatorAnimation() {
+  const voltas = parseInt(document.getElementById('sim-slider-for').value) || 3;
+  const lines = [
+    document.getElementById('sim-for-line-1'),
+    document.getElementById('sim-for-line-2'),
+    document.getElementById('sim-for-line-3'),
+    document.getElementById('sim-for-line-4'),
+    document.getElementById('sim-for-line-5')
+  ];
+  const consoleEl = document.getElementById('sim-console-output-for');
+  
+  if (!consoleEl) return;
+  
+  // Limpa highlights e console
+  lines.forEach(l => l.classList.remove('active'));
+  consoleEl.innerText = "";
+  
+  let currentVolta = 0;
+  
+  // Atribuição inicial
+  lines[0].classList.add('active');
+  document.getElementById('sim-code-for-val').innerText = voltas;
+  
+  const stepTime = 800; // ms per step
+  const btn = document.getElementById('btn-run-for-sim');
+  btn.disabled = true;
+  btn.innerText = "Executando...";
+  
+  function nextStep() {
+    lines.forEach(l => l.classList.remove('active'));
+    
+    if (currentVolta < voltas) {
+      // Estamos no for
+      lines[2].classList.add('active');
+      
+      setTimeout(() => {
+        lines[2].classList.remove('active');
+        lines[3].classList.add('active');
+        consoleEl.innerText += `Volta número: ${currentVolta}\n`;
+        currentVolta++;
+        
+        setTimeout(nextStep, stepTime);
+      }, stepTime);
+    } else {
+      // Fim do laço
+      lines[4].classList.add('active');
+      consoleEl.innerText += `Fim da corrida!\n`;
+      setTimeout(() => {
+        lines.forEach(l => l.classList.remove('active'));
+        btn.disabled = false;
+        btn.innerText = "Executar Animação ▶️";
+      }, stepTime * 1.5);
+    }
+  }
+  
+  setTimeout(nextStep, stepTime);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const forSlider = document.getElementById('sim-slider-for');
+  const forVal = document.getElementById('sim-val-for');
+  if (forSlider && forVal) {
+    forSlider.addEventListener('input', (e) => {
+      forVal.innerText = e.target.value;
+      document.getElementById('sim-code-for-val').innerText = e.target.value;
+    });
+  }
+});
