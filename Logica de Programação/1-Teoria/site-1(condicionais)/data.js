@@ -532,6 +532,7 @@ senha_correta = False
         ]
       }
     ],
-    exam: []
+    exam: [],
+    recovery: []
   }
 };

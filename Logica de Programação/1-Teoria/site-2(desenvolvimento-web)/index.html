@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Site interativo para aprender conceitos de desenvolvimento web, tags HTML, propriedades CSS e Box Model. Feito especialmente para alunos do Ensino Médio de Lógica de Programação.">
+  <title>HTML &amp; CSS 101 - Lógica de Programação e Web Design</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- CABEÇALHO E NAVEGAÇÃO -->
+  <header>
+    <div class="header-container">
+      <div class="logo-section">
+        <h1>🎨 HTML &amp; CSS <span>101</span></h1>
+        <p>Lógica de Programação &amp; Desenvolvimento Web</p>
+      </div>
+      
+      <nav>
+        <button class="tab-btn active" data-tab="home" id="tab-nav-home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Início
+        </button>
+        <button class="tab-btn" data-tab="theory" id="tab-nav-theory">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          Teoria
+        </button>
+        <button class="tab-btn" data-tab="simulator" id="tab-nav-simulator">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Simulador
+        </button>
+        <button class="tab-btn" data-tab="quiz" id="tab-nav-quiz">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Quiz
+        </button>
+        <button class="tab-btn" data-tab="challenges" id="tab-nav-challenges">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          Desafios
+        </button>
+        <button class="tab-btn" data-tab="report" id="tab-nav-report">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Relatório
+        </button>
+        <button class="tab-btn" data-tab="exam" id="tab-nav-exam">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path><path d="M12 12v10"></path></svg>
+          Avaliação 1
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main>
+    
+    <!-- ABA 1: INÍCIO / VISÃO GERAL -->
+    <section id="home-tab" class="tab-content active">
+      <div class="welcome-grid">
+        <div class="card welcome-box">
+          <h2>Olá, web designer! 👋</h2>
+          <p class="intro-text">
+            Seja bem-vindo ao seu guia prático de <strong>HTML &amp; CSS</strong>. 
+            Aqui você vai aprender como estruturar layouts na web com HTML e aplicar cores, bordas e espaçamentos elegantes com CSS.
+          </p>
+          
+          <div style="margin-top: 2rem;">
+            <h3 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.75rem;">Como usar este site?</h3>
+            <ul style="margin-left: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; color: #334155;">
+              <li>📖 Leia a <strong>Teoria</strong> para entender tags, estilos, seletores e o Box Model de forma interativa.</li>
+              <li>⚡ Experimente o <strong>Simulador Live Sandbox</strong> para testar códigos HTML/CSS com visualização em tempo real.</li>
+              <li>🧠 Teste seus conhecimentos teóricos respondendo ao nosso <strong>Quiz</strong> interativo.</li>
+              <li>💻 Complete os <strong>Desafios de Código</strong> e ganhe estrelas validando suas páginas web passo a passo.</li>
+            </ul>
+          </div>
+          
+          <div style="margin-top: 2rem;">
+            <button onclick="switchTab('theory')" class="primary-btn" id="start-learning-btn">Começar a Aprender ➔</button>
+          </div>
+        </div>
+        
+        <div class="stats-card">
+          <div class="stats-header">Seu Progresso de Estudos</div>
+          
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">
+              <span>Trilha Completa</span>
+              <span id="progress-percent-text">0% concluído</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-fill" id="total-progress-fill"></div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 1.5rem;">
+            <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-light); margin-bottom: 0.5rem;">Status dos Desafios:</div>
+            <div class="level-badge-container">
+              <div class="level-badge" id="badge-lvl-1" onclick="switchTab('challenges'); selectChallenge(1);">1</div>
+              <div class="level-badge" id="badge-lvl-2" onclick="switchTab('challenges'); selectChallenge(2);">2</div>
+              <div class="level-badge" id="badge-lvl-3" onclick="switchTab('challenges'); selectChallenge(3);">3</div>
+              <div class="level-badge" id="badge-lvl-4" onclick="switchTab('challenges'); selectChallenge(4);">4</div>
+              <div class="level-badge" id="badge-lvl-5" onclick="switchTab('challenges'); selectChallenge(5);">5</div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <button onclick="resetProgress()" class="btn-secondary" style="width: 100%; font-size: 0.85rem; color: var(--color-error); border-color: #FECDD3;" id="reset-progress-btn">
+              Resetar Progresso ⚡
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Banner Final de Conclusão -->
+      <div id="final-achievement-banner" class="achievement-banner" style="display: none; margin-top: 2rem;">
+        <span class="achievement-icon">🏆</span>
+        <div class="achievement-text">
+          <h3>Incrível! Trilha 100% Concluída!</h3>
+          <p>Você dominou as tags de estrutura e o Box Model do CSS! Completou todos os desafios e está pronto para a avaliação!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 2: TEORIA -->
+    <section id="theory-tab" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">📖 Guia de Teoria Interativa</h2>
+        <p style="color: var(--text-light); margin-bottom: 2rem;" id="theory-intro-text">
+          Desenvolvimento web é sobre organizar elementos visuais e dar a eles o estilo desejado. Cada site na internet é feito de tags estruturais e regras de folhas de estilos aplicadas a essas tags.
+        </p>
+        
+        <div class="theory-nav">
+          <button class="theory-tab-btn active" data-concept="html" id="theory-btn-html">O que é HTML? (Estrutura)</button>
+          <button class="theory-tab-btn" data-concept="css" id="theory-btn-css">O que é CSS? (Estilos)</button>
+          <button class="theory-tab-btn" data-concept="selectors" id="theory-btn-selectors">Seletores CSS (Alvos)</button>
+          <button class="theory-tab-btn" data-concept="boxmodel" id="theory-btn-boxmodel">O Box Model (Espaço)</button>
+        </div>
+        
+        <div class="theory-grid">
+          <!-- Textos explicativos -->
+          <div>
+            <!-- Conteúdo HTML -->
+            <div id="theory-content-html" class="theory-body-content active">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">1. O que é HTML? (Estrutura)</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                O HTML é o esqueleto do site. Ele define os textos, imagens, links e formulários que aparecem. Usamos tags com abreviaturas em inglês como <code>&lt;p&gt;</code> (paragraph) ou <code>&lt;a&gt;</code> (anchor/link) para demarcar os blocos.
+              </p>
+              <p class="code-snippet" style="margin-bottom: 1rem;">&lt;h1&gt;Título da Página&lt;/h1&gt;
+&lt;p&gt;Este é um parágrafo que contém informações úteis.&lt;/p&gt;
+&lt;a href="https://site.com"&gt;Ir para o Site&lt;/a&gt;</p>
+              <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+                <strong>Analogia:</strong> HTML é como o esqueleto do corpo humano ou os tijolos de cimento de um edifício.
+              </div>
+            </div>
+            
+            <!-- Conteúdo CSS -->
+            <div id="theory-content-css" class="theory-body-content">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">2. O que é CSS? (Estilos)</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                Sem o CSS, todas as páginas seriam apenas textos pretos em fundo branco. Com ele, você aplica as regras visuais. Os estilos são compostos de propriedades (ex: <code>color</code>) seguidas de dois pontos e os valores (ex: <code>blue</code>).
+              </p>
+              <p class="code-snippet" style="margin-bottom: 1rem;">/* Aplicando no CSS */
+h1 {
+    color: red;            /* Cor do texto vermelha */
+    background-color: gold; /* Fundo amarelo ouro */
+    text-align: center;     /* Alinhamento central */
+}</p>
+              <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+                <strong>Analogia:</strong> CSS é o acabamento: escolher a cor da tinta, papel de parede e pendurar quadros nas paredes.
+              </div>
+            </div>
+            
+            <!-- Conteúdo SELETORES -->
+            <div id="theory-content-selectors" class="theory-body-content">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">3. Seletores CSS (Alvos)</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                Seletores informam ao CSS qual elemento ele deve colorir:
+              </p>
+              <ul style="margin-left: 1.5rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.4rem; color: #334155;">
+                <li><strong>Tag:</strong> Escreva apenas o nome da tag (ex: <code>h2</code>). Altera todos os elementos idênticos.</li>
+                <li><strong>Classe (.):</strong> Usada quando queremos marcar vários elementos que compartilham o mesmo estilo (ex: <code>.importante</code>).</li>
+                <li><strong>ID (#):</strong> Usado para estilizar um único elemento exclusivo na página (ex: <code>#topo</code>).</li>
+              </ul>
+              <p class="code-snippet" style="margin-bottom: 1rem;">/* Selecionando no CSS */
+p { color: gray; }           /* Altera todos os &lt;p&gt; */
+.destaque { font-weight: bold; } /* Altera class="destaque" */
+#rodape { color: silver; }    /* Altera id="rodape" */</p>
+            </div>
+
+            <!-- Conteúdo BOX MODEL -->
+            <div id="theory-content-boxmodel" class="theory-body-content">
+              <h3 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">4. O Box Model (Espaçamento)</h3>
+              <p style="margin-bottom: 1rem; color: #334155;">
+                Todos os elementos na tela são caixas empilhadas. Controlar o tamanho dessa caixa e a distância até os vizinhos é fundamental:
+              </p>
+              <ul style="margin-left: 1.5rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.4rem; color: #334155;">
+                <li><strong>Content:</strong> Onde fica o texto ou a imagem.</li>
+                <li><strong>Padding:</strong> Espaço interno para respirar (afasta o texto da borda).</li>
+                <li><strong>Border:</strong> A linha que desenha o limite físico da caixa.</li>
+                <li><strong>Margin:</strong> Espaço externo (empurra outras caixas para longe).</li>
+              </ul>
+              <div style="background-color: var(--bg-cream); border-left: 4px solid var(--accent-teal); padding: 0.8rem; border-radius: 4px; font-size: 0.9rem;">
+                <strong>Analogia:</strong> Enviar uma caneca pelos Correios: a caneca é o Content, o plástico bolha protetor é o Padding, a caixa de papelão é a Border, e o espaço até o próximo pacote no caminhão é a Margin.
+              </div>
+            </div>
+            
+            <div style="margin-top: 1.5rem; background-color: var(--color-warning-bg); color: #92400E; padding: 1rem; border-radius: var(--border-radius-sm); font-size: 0.9rem; border-left: 4px solid var(--color-warning);">
+              <strong>⚠️ Regra de Ouro do HTML: Tags Fechadas!</strong><br>Não se esqueça de fechar cada tag aberta (ex: &lt;p&gt;conteúdo&lt;/p&gt;). Tags abertas incorretamente bagunçam o alinhamento da página toda!
+            </div>
+          </div>
+          
+          <!-- Área interativa lateral -->
+          <div id="theory-flowchart-area" style="width: 100%;">
+            <!-- Inserido dinamicamente via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 3: SIMULADOR (SANDBOX) -->
+    <section id="simulator-tab" class="tab-content">
+      <div class="card" style="padding: 1.5rem;">
+        <h2 class="card-title">⚡ Simulador HTML &amp; CSS Live Sandbox</h2>
+        <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+          Digite códigos HTML e CSS no editor. O visualizador no lado direito exibirá a renderização da página instantaneamente!
+        </p>
+        
+        <div class="simulator-layout">
+          <!-- Editor de Código -->
+          <div class="sim-editor-column">
+            <div class="editor-header">
+              <span>Editor de Código HTML + CSS</span>
+              <span class="lang">html / css</span>
+            </div>
+            <div class="sim-code-editor">
+              <div class="editor-wrapper notranslate" translate="no" style="height: 100%;">
+                <textarea id="sim-code-editor-textarea" class="code-textarea" style="height: 100%;" spellcheck="false" translate="no"></textarea>
+                <pre><code></code></pre>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Live Preview Iframe -->
+          <div class="sim-preview-column">
+            <div class="sim-preview-header">
+              <span>Visualização do Navegador (Preview)</span>
+              <span style="color: var(--text-light); font-size: 0.75rem;">LIVE iframe</span>
+            </div>
+            <iframe id="sim-live-preview-iframe" class="sim-preview-iframe"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 4: QUIZ -->
+    <section id="quiz-tab" class="tab-content">
+      <div class="card" id="quiz-card-wrapper" style="max-width: 800px; margin: 0 auto;">
+        <h2 class="card-title">🧠 Quiz de Conceitos Web</h2>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">
+          Responda a 5 perguntas rápidas para testar seu conhecimento teórico sobre tags HTML, propriedades CSS e Box Model.
+        </p>
+        
+        <div id="quiz-container">
+          <!-- Inserido dinamicamente via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 5: DESAFIOS DE CÓDIGO -->
+    <section id="challenges-tab" class="tab-content">
+      <div class="challenges-grid">
+        
+        <!-- Lista de Desafios lateral -->
+        <div class="challenge-list">
+          <div class="challenge-list-title">Níveis de Prática</div>
+          <div id="challenge-list-container">
+            <!-- Gerado via JS -->
+          </div>
+        </div>
+        
+        <!-- Editor de Código Principal -->
+        <div class="card workspace-card" style="padding: 1.5rem;">
+          
+          <div class="challenge-desc">
+            <h3 id="chal-title">Nível 1: Estruturando o Cabeçalho 🏷️</h3>
+            <p id="chal-description">Carregando...</p>
+          </div>
+          
+          <div>
+            <div class="editor-header">
+              <span>Editor de Código HTML &amp; CSS</span>
+              <span class="lang">html</span>
+            </div>
+            <div class="editor-container">
+              <div class="editor-wrapper notranslate" translate="no">
+                <textarea id="chal-code-editor" class="code-textarea" spellcheck="false" translate="no" oninput="onCodeEditorInput(this.value); updateEditorHighlight(this, this.nextElementSibling)"></textarea>
+                <pre id="chal-code-highlight"><code></code></pre>
+              </div>
+            </div>
+            
+            <div class="editor-toolbar">
+              <button onclick="resetChallengeCode()" class="btn-secondary" id="editor-reset-btn">Resetar Código 🔄</button>
+              <button onclick="runAndValidateCode()" class="primary-btn" id="editor-run-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Validar Estrutura DOM ⚡
+              </button>
+            </div>
+          </div>
+          
+          <!-- Painel de Resultados do Validador -->
+          <div id="chal-results-panel" class="results-panel">
+            <!-- Inserido dinamicamente via JS -->
+          </div>
+          
+        </div>
+        
+      </div>
+    </section>
+
+    <!-- ABA 6: RELATÓRIO DE DESEMPENHO -->
+    <section id="report-tab" class="tab-content">
+      <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div id="report-form-area" style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+          <h2 class="card-title">📝 Relatório Escolar do Aluno</h2>
+          <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+            Digite o nome completo do aluno para carregar o histórico de atividades da trilha, acertos teóricos e diagnóstico pedagógico personalizado.
+          </p>
+          <div style="display: flex; gap: 1rem; align-items: center; max-width: 500px; flex-wrap: wrap;">
+            <label for="student-name-input" style="font-weight: 600; color: var(--primary-navy); min-width: 120px;">Nome do Aluno:</label>
+            <input type="text" id="student-name-input" placeholder="Ex: Maria Eduarda Silva" style="flex-grow: 1; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); outline: none; font-size: 1rem;" oninput="updateStudentName(this.value)">
+          </div>
+        </div>
+        
+        <div id="report-output-area">
+          <!-- Gerado dinamicamente via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 7: AVALIAÇÃO 1 (PROTEGIDA POR SENHA) -->
+    <section id="exam-tab" class="tab-content">
+      <!-- Tela de Senha (mostrada inicialmente) -->
+      <div id="exam-auth-card" class="card" style="max-width: 500px; margin: 2rem auto; text-align: center;">
+        <div class="success-badge-large" style="background-color: var(--accent-teal-light); color: var(--accent-teal);">🔒</div>
+        <h2 class="card-title" style="margin-top: 1rem;">Área Restrita: Avaliação 1</h2>
+        <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+          Esta seção é reservada para a realização da prova prática de HTML/CSS. Solicite a senha de acesso ao professor.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center; width: 100%;">
+          <input type="password" id="exam-password-input" placeholder="Digite a senha de acesso" style="width: 100%; max-width: 300px; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 1rem; text-align: center; outline: none;" onkeydown="if(event.key === 'Enter') unlockExam()">
+          <button onclick="unlockExam()" class="primary-btn" id="exam-unlock-btn" style="width: 100%; max-width: 300px; justify-content: center;">Acessar Avaliação ➔</button>
+          <div id="exam-auth-error" style="color: var(--color-error); font-size: 0.9rem; font-weight: 600; display: none; margin-top: 0.5rem;">Senha incorreta. Tente novamente!</div>
+        </div>
+      </div>
+
+      <!-- Área da Prova (mostrada somente após acertar a senha) -->
+      <div id="exam-content-card" style="display: none;">
+        <!-- Card de Identificação -->
+        <div class="card" style="max-width: 800px; margin: 0 auto 2rem;">
+          <h2 class="card-title">📝 Identificação dos Alunos (Duplas ou Individual)</h2>
+          <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+            Insira o nome dos integrantes da dupla. Se estiver realizando a avaliação individualmente, preencha apenas o campo do Integrante 1.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 600px;">
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+              <label for="exam-student-name-1" style="font-weight: 600; color: var(--primary-navy); min-width: 160px;">Nome do Integrante 1:</label>
+              <input type="text" id="exam-student-name-1" placeholder="Nome Completo do Aluno 1" style="flex-grow: 1; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); outline: none; font-size: 1rem;" oninput="onExamNameChange()">
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+              <label for="exam-student-name-2" style="font-weight: 600; color: var(--primary-navy); min-width: 160px;">Nome do Integrante 2:</label>
+              <input type="text" id="exam-student-name-2" placeholder="Nome Completo do Aluno 2 (Opcional)" style="flex-grow: 1; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); outline: none; font-size: 1rem;" oninput="onExamNameChange()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Área de Questões / Workspace do Exam -->
+        <div class="exam-workspace-container" id="exam-questions-area" style="display: none; max-width: 1200px; margin: 0 auto;">
+          <div class="challenges-grid">
+            <!-- Lista de Questões lateral -->
+            <div class="challenge-list">
+              <div class="challenge-list-title" style="background-color: var(--primary-navy); color: #FFFFFF;">Questões da Prova</div>
+              <div id="exam-list-container">
+                <!-- Gerado via JS (Questão 1, 2, 3) -->
+              </div>
+            </div>
+
+            <!-- Editor de Código da Questão Ativa -->
+            <div class="card workspace-card" style="padding: 1.5rem;">
+              <div class="challenge-desc">
+                <h3 id="exam-q-title">Questão 1</h3>
+                <p id="exam-q-description">Carregando...</p>
+              </div>
+
+              <div>
+                <div class="editor-header" style="background-color: var(--primary-navy);">
+                  <span>Editor de Código (Avaliação)</span>
+                  <span class="lang">html</span>
+                </div>
+                <div class="editor-container">
+                  <div class="editor-wrapper notranslate" translate="no">
+                    <textarea id="exam-code-editor" class="code-textarea" spellcheck="false" translate="no" oninput="onExamCodeInput(this.value); updateEditorHighlight(this, this.nextElementSibling)"></textarea>
+                    <pre id="exam-code-highlight"><code></code></pre>
+                  </div>
+                </div>
+                <div class="editor-toolbar">
+                  <button onclick="resetExamCode()" class="btn-secondary">Limpar Código 🔄</button>
+                  <button onclick="runAndValidateExamCode()" class="primary-btn" style="background-color: var(--primary-navy);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Testar Código ⚡
+                  </button>
+                </div>
+              </div>
+
+              <!-- Painel de Resultados do Validador -->
+              <div id="exam-results-panel" class="results-panel">
+                <!-- Inserido dinamicamente via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Rodapé de Ações do Exame -->
+          <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm); flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.25rem;">Pronto para entregar?</h4>
+              <p style="color: var(--text-light); font-size: 0.9rem;">
+                Revise suas respostas com calma. Você poderá conferir todos os seus códigos antes do envio final.
+              </p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+              <button onclick="resetEntireExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-error); padding: 0.8rem 1.2rem;">Resetar Prova 🔄</button>
+              <button onclick="openExamReview()" class="primary-btn" style="background-color: var(--accent-teal); font-size: 1.1rem; padding: 0.8rem 1.5rem;" id="exam-review-btn">
+                Revisar e Enviar Avaliação ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Revisão e Envio -->
+      <div id="exam-review-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-content" style="max-width: 850px;">
+          <div class="modal-header">
+            <h3 style="font-family: var(--font-title); color: var(--primary-navy); margin: 0;">📋 Revisão da Avaliação 1 (HTML &amp; CSS)</h3>
+            <button onclick="closeExamReview()" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+            <div id="exam-review-student-info" style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+              <!-- Nome dos alunos -->
+            </div>
+            <div id="exam-review-questions-list">
+              <!-- Códigos escritos e status de teste de cada questão -->
+            </div>
+            <div class="quiz-feedback warning" style="margin-top: 1.5rem; display: block; background-color: #FEF3C7; border-left: 4px solid #F59E0B; color: #92400E; padding: 1rem; border-radius: 4px; font-size: 0.9rem;">
+              <strong>⚠️ Instruções de Envio:</strong><br>
+              Ao clicar no botão de envio abaixo, a plataforma tentará registrar os dados no servidor EmailJS. <br>
+              Caso ocorra algum bloqueio de rede ou você esteja sem acesso à internet externa na escola, o sistema abrirá o seu cliente de e-mail local direcionado para o professor (<strong>euclidespaim@gmail.com</strong>). Se necessário, utilize as opções de cópia ou download de arquivo na próxima tela para entrega manual.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button onclick="closeExamReview()" class="btn-secondary">Voltar à Prova</button>
+            <button onclick="submitExamFinal()" class="primary-btn" style="background-color: var(--accent-teal); font-size: 1.05rem;">
+              Enviar para euclidespaim@gmail.com ✉️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tela de Sucesso Pós-Envio -->
+      <div id="exam-success-card" class="card" style="display: none; max-width: 750px; margin: 2rem auto; text-align: center;">
+        <div class="success-badge-large">🎉</div>
+        <h2 class="card-title" style="margin-top: 1rem;">Avaliação Concluída!</h2>
+        <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+          Seu relatório de avaliação foi gerado com sucesso. Caso o e-mail não tenha sido recebido, utilize as opções abaixo para entregar o seu arquivo.
+        </p>
+        
+        <div style="background-color: var(--bg-cream); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1.25rem; text-align: left; margin-bottom: 2rem;">
+          <h4 style="color: var(--primary-navy); margin-bottom: 0.5rem; font-family: var(--font-title);">Relatório Gerado:</h4>
+          <textarea id="exam-report-text-copy" readonly style="width: 100%; height: 220px; font-family: var(--font-code); font-size: 0.85rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; resize: none; background-color: #F8FAFC; outline: none;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+          <button onclick="openExamReview()" class="primary-btn" style="background-color: var(--primary-navy);">Abrir Relatório da Prova 📋</button>
+          <button onclick="copyExamReportToClipboard()" class="btn-secondary" id="exam-copy-btn">Copiar Relatório 📋</button>
+          <button onclick="downloadExamReportAsTxt()" class="btn-secondary">Baixar Arquivo .txt 💾</button>
+          <button onclick="resetSubmittedExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-warning);">Liberar Envio (Senha do Professor) 🔑</button>
+          <button onclick="resetEntireExam()" class="btn-secondary" style="border-color: #FECDD3; color: var(--color-error);">Resetar Prova Completamente 🔄</button>
+          <button onclick="retryMailtoSubmit()" class="primary-btn" style="background-color: var(--accent-teal);">Reabrir E-mail ✉️</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- RODAPÉ -->
+  <footer style="text-align: center; padding: 2rem; color: var(--text-light); border-top: 1px solid var(--border-color); background-color: var(--bg-card); margin-top: 4rem;">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <p>&copy; 2026 - Lógica de Programação | 1º Ano do Ensino Médio</p>
+      <p style="font-size: 0.85rem;">Desenvolvido com ❤️ para a trilha de aprendizado de HTML/CSS.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts locais -->
+  <script src="data.js"></script>
+  <script src="validator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

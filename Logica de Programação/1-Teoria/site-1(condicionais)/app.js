@@ -1073,8 +1073,8 @@ function runAndValidateCode() {
   }
 }
 
-function toggleTestDetails(idx) {
-  const el = document.getElementById(`test-details-${idx}`);
+function toggleTestDetails(id) {
+  const el = typeof id === 'string' ? document.getElementById(id) : document.getElementById(`test-details-${id}`);
   if (el) {
     el.classList.toggle('visible');
   }
@@ -1336,36 +1336,8 @@ STATE.exam = {
   activeQ: 1
 };
 
-function setupExam() {
-  const listContainer = document.getElementById('exam-list-container');
-  if (!listContainer) return;
-  
-  // Limpa e gera lista lateral de questões
-  let html = "";
-  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
-    const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
-    const completedClass = isCompleted ? 'completed' : '';
-    const activeClass = q.id === STATE.exam.activeQ ? 'active' : '';
-    
-    html += `
-      <button class="challenge-item ${activeClass} ${completedClass}" id="exam-item-${q.id}" onclick="selectExamQuestion(${q.id})">
-        Questão ${q.id}: ${q.name.split(':')[1].trim()}
-      </button>
-    `;
-  });
-  listContainer.innerHTML = html;
-  
-  // Carrega os nomes se já estiverem salvos
-  const nameInput1 = document.getElementById('exam-student-name-1');
-  const nameInput2 = document.getElementById('exam-student-name-2');
-  if (nameInput1) nameInput1.value = STATE.progress.examName1 || "";
-  if (nameInput2) nameInput2.value = STATE.progress.examName2 || "";
+// --- MOTOR AUXILIAR DE CRIPTOGRAFIA (SHA-256) ---
 
-  // Habilita inserção de Tab como 4 espaços
-  enableTabKeyPress('exam-code-editor', onExamCodeInput);
-}
-
-// Função auxiliar para calcular o hash SHA-256 usando implementação pure JS (fallback seguro)
 function sha256js(ascii) {
   function rightRotate(value, amount) {
     return (value >>> amount) | (value << (32 - amount));
@@ -1463,7 +1435,6 @@ function sha256js(ascii) {
   return hex(h0) + hex(h1) + hex(h2) + hex(h3) + hex(h4) + hex(h5) + hex(h6) + hex(h7);
 }
 
-// Função auxiliar assíncrona para calcular o hash SHA-256 de uma string
 async function sha256(message) {
   try {
     if (window.crypto && window.crypto.subtle) {
@@ -1479,23 +1450,78 @@ async function sha256(message) {
   return sha256js(message);
 }
 
-async function unlockExam() {
-  const pwdInput = document.getElementById('exam-password-input');
-  const errorDiv = document.getElementById('exam-auth-error');
+// --- MOTOR DE AVALIAÇÃO E RECUPERAÇÃO UNIFICADO (DRY) ---
+
+function getAssessmentConfig(type) {
+  const isRec = type === 'recovery';
+  return {
+    prefix: isRec ? 'recovery' : 'exam',
+    stateActiveQ: isRec ? STATE.recovery : STATE.exam,
+    propUnlocked: isRec ? 'recoveryUnlocked' : 'examUnlocked',
+    propSubmitted: isRec ? 'recoverySubmitted' : 'examSubmitted',
+    propName1: isRec ? 'recoveryName1' : 'examName1',
+    propName2: isRec ? 'recoveryName2' : 'examName2',
+    propCodes: isRec ? 'recoveryCodes' : 'examCodes',
+    propResults: isRec ? 'recoveryResults' : 'examResults',
+    dataset: (MODULES_DATA[STATE.currentModule] && MODULES_DATA[STATE.currentModule][isRec ? 'recovery' : 'exam']) || [],
+    titleLabel: isRec ? 'Prova de Recuperação 1' : 'Avaliação 1',
+    editorId: isRec ? 'recovery-code-editor' : 'exam-code-editor',
+    emailSubject: isRec ? `Prova de Recuperação - ` : `Avaliação 1 - `,
+    filenamePrefix: isRec ? `recuperacao_1_` : `avaliacao_1_`,
+    successMessage: isRec ? "Prova de recuperação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados." : "Avaliação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados.",
+    successResetSubmitMessage: isRec ? "Recuperação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los." : "Avaliação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los.",
+    enterPromptMessage: isRec ? "Digite a senha do professor para liberar uma nova tentativa de envio da recuperação:" : "Digite a senha do professor para liberar uma nova tentativa de envio:",
+    resetPromptMessage: isRec ? "Digite a senha do professor para RESETAR COMPLETAMENTE a recuperação (apaga nomes e códigos):" : "Digite a senha do professor para RESETAR COMPLETAMENTE a avaliação (apaga nomes e códigos):",
+    // Hashes seguros (sem senhas em texto puro nos comentários!)
+    hashAccess: isRec 
+      ? "ba27e959b3d789cf33ce71d6a5d9fecf20b5808e3224c049c7d77f6bb713710d" // Hash de acesso da Recuperação 1
+      : "08c27d176d710371afef9924eb32c012803eef04a6647d3febf69422f27a294b", // Hash de acesso da Avaliação 1
+    hashProfessor: "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3" // Hash de controle de resets
+  };
+}
+
+function setupAssessment(type) {
+  const cfg = getAssessmentConfig(type);
+  const listContainer = document.getElementById(`${cfg.prefix}-list-container`);
+  if (!listContainer) return;
+  
+  let html = "";
+  cfg.dataset.forEach(q => {
+    const isCompleted = STATE.progress[cfg.propResults] && STATE.progress[cfg.propResults][q.id];
+    const completedClass = isCompleted ? 'completed' : '';
+    const activeClass = q.id === cfg.stateActiveQ.activeQ ? 'active' : '';
+    
+    html += `
+      <button class="challenge-item ${activeClass} ${completedClass}" id="${cfg.prefix}-item-${q.id}" onclick="selectAssessmentQuestion('${type}', ${q.id})">
+        Questão ${q.id}: ${q.name.split(':')[1].trim()}
+      </button>
+    `;
+  });
+  listContainer.innerHTML = html;
+  
+  const nameInput1 = document.getElementById(`${cfg.prefix}-student-name-1`);
+  const nameInput2 = document.getElementById(`${cfg.prefix}-student-name-2`);
+  if (nameInput1) nameInput1.value = STATE.progress[cfg.propName1] || "";
+  if (nameInput2) nameInput2.value = STATE.progress[cfg.propName2] || "";
+
+  enableTabKeyPress(cfg.editorId, (code) => onAssessmentCodeInput(type, code));
+}
+
+async function unlockAssessment(type) {
+  const cfg = getAssessmentConfig(type);
+  const pwdInput = document.getElementById(`${cfg.prefix}-password-input`);
+  const errorDiv = document.getElementById(`${cfg.prefix}-auth-error`);
   
   if (!pwdInput) return;
   
   const enteredPassword = pwdInput.value.trim();
   const hash = await sha256(enteredPassword);
   
-  // Hash correspondente a "professor101"
-  const expectedHash = "08c27d176d710371afef9924eb32c012803eef04a6647d3febf69422f27a294b";
-  
-  if (hash === expectedHash) {
-    STATE.progress.examUnlocked = true;
+  if (hash === cfg.hashAccess) {
+    STATE.progress[cfg.propUnlocked] = true;
     if (errorDiv) errorDiv.style.display = 'none';
     saveProgress();
-    refreshExamUI();
+    refreshAssessmentUI(type);
   } else {
     if (errorDiv) errorDiv.style.display = 'block';
     pwdInput.value = "";
@@ -1503,40 +1529,40 @@ async function unlockExam() {
   }
 }
 
-function refreshExamUI() {
-  const authCard = document.getElementById('exam-auth-card');
-  const contentCard = document.getElementById('exam-content-card');
-  const successCard = document.getElementById('exam-success-card');
-  const questionsArea = document.getElementById('exam-questions-area');
-  const nameInput1 = document.getElementById('exam-student-name-1');
-  const nameInput2 = document.getElementById('exam-student-name-2');
+function refreshAssessmentUI(type) {
+  const cfg = getAssessmentConfig(type);
+  const authCard = document.getElementById(`${cfg.prefix}-auth-card`);
+  const contentCard = document.getElementById(`${cfg.prefix}-content-card`);
+  const successCard = document.getElementById(`${cfg.prefix}-success-card`);
+  const questionsArea = document.getElementById(`${cfg.prefix}-questions-area`);
+  const nameInput1 = document.getElementById(`${cfg.prefix}-student-name-1`);
+  const nameInput2 = document.getElementById(`${cfg.prefix}-student-name-2`);
   
   if (!authCard || !contentCard) return;
   
-  // Se o aluno já concluiu/enviou a avaliação, pula direto para a tela de sucesso
-  if (STATE.progress.examSubmitted) {
+  if (STATE.progress[cfg.propSubmitted]) {
     authCard.style.display = 'none';
     contentCard.style.display = 'none';
     if (successCard) successCard.style.display = 'block';
     
-    const textarea = document.getElementById('exam-report-text-copy');
-    if (textarea) textarea.value = generateExamReportText();
+    const textarea = document.getElementById(`${cfg.prefix}-report-text-copy`);
+    if (textarea) textarea.value = generateAssessmentReportText(type);
     return;
   }
   
-  if (STATE.progress.examUnlocked) {
+  if (STATE.progress[cfg.propUnlocked]) {
     authCard.style.display = 'none';
     contentCard.style.display = 'block';
     if (successCard) successCard.style.display = 'none';
     
-    const name1 = STATE.progress.examName1 || "";
-    const name2 = STATE.progress.examName2 || "";
+    const name1 = STATE.progress[cfg.propName1] || "";
+    const name2 = STATE.progress[cfg.propName2] || "";
     if (nameInput1) nameInput1.value = name1;
     if (nameInput2) nameInput2.value = name2;
     
     if (name1.trim().length > 2) {
       if (questionsArea) questionsArea.style.display = 'block';
-      loadExamQuestion(STATE.exam.activeQ);
+      loadAssessmentQuestion(type, cfg.stateActiveQ.activeQ);
     } else {
       if (questionsArea) questionsArea.style.display = 'none';
     }
@@ -1547,59 +1573,59 @@ function refreshExamUI() {
   }
 }
 
-function onExamNameChange() {
-  const name1 = document.getElementById('exam-student-name-1').value;
-  const name2 = document.getElementById('exam-student-name-2').value;
+function onAssessmentNameChange(type) {
+  const cfg = getAssessmentConfig(type);
+  const name1 = document.getElementById(`${cfg.prefix}-student-name-1`).value;
+  const name2 = document.getElementById(`${cfg.prefix}-student-name-2`).value;
   
-  STATE.progress.examName1 = name1;
-  STATE.progress.examName2 = name2;
+  STATE.progress[cfg.propName1] = name1;
+  STATE.progress[cfg.propName2] = name2;
   saveProgress();
   
-  const questionsArea = document.getElementById('exam-questions-area');
+  const questionsArea = document.getElementById(`${cfg.prefix}-questions-area`);
   if (name1.trim().length > 2) {
     if (questionsArea) questionsArea.style.display = 'block';
-    loadExamQuestion(STATE.exam.activeQ);
+    loadAssessmentQuestion(type, cfg.stateActiveQ.activeQ);
   } else {
     if (questionsArea) questionsArea.style.display = 'none';
   }
 }
 
-function selectExamQuestion(qId) {
-  STATE.exam.activeQ = qId;
+function selectAssessmentQuestion(type, qId) {
+  const cfg = getAssessmentConfig(type);
+  cfg.stateActiveQ.activeQ = qId;
   
-  // Atualiza botões laterais
-  document.querySelectorAll('#exam-list-container .challenge-item').forEach(btn => {
-    const btnId = parseInt(btn.id.replace('exam-item-', ''));
+  document.querySelectorAll(`#${cfg.prefix}-list-container .challenge-item`).forEach(btn => {
+    const btnId = parseInt(btn.id.replace(`${cfg.prefix}-item-`, ''));
     btn.classList.remove('active');
     if (btnId === qId) {
       btn.classList.add('active');
     }
   });
   
-  loadExamQuestion(qId);
+  loadAssessmentQuestion(type, qId);
 }
 
-function loadExamQuestion(qId) {
-  const q = MODULES_DATA[STATE.currentModule].exam.find(item => item.id === qId);
+function loadAssessmentQuestion(type, qId) {
+  const cfg = getAssessmentConfig(type);
+  const q = cfg.dataset.find(item => item.id === qId);
   if (!q) return;
   
-  const qTitle = document.getElementById('exam-q-title');
-  const qDesc = document.getElementById('exam-q-description');
-  const editor = document.getElementById('exam-code-editor');
-  const resultsPanel = document.getElementById('exam-results-panel');
+  const qTitle = document.getElementById(`${cfg.prefix}-q-title`);
+  const qDesc = document.getElementById(`${cfg.prefix}-q-description`);
+  const editor = document.getElementById(cfg.editorId);
+  const resultsPanel = document.getElementById(`${cfg.prefix}-results-panel`);
   
   if (qTitle && qDesc && editor) {
     qTitle.innerHTML = q.name;
     qDesc.innerHTML = q.description;
     
-    // Carrega o código do estado ou inicial
-    if (STATE.progress.examCodes && STATE.progress.examCodes[qId] !== undefined) {
-      editor.value = STATE.progress.examCodes[qId];
+    if (STATE.progress[cfg.propCodes] && STATE.progress[cfg.propCodes][qId] !== undefined) {
+      editor.value = STATE.progress[cfg.propCodes][qId];
     } else {
       editor.value = q.starterCode;
     }
     
-    // Atualiza destaque
     const pre = editor.nextElementSibling;
     if (pre) {
       updateEditorHighlight(editor, pre);
@@ -1611,49 +1637,52 @@ function loadExamQuestion(qId) {
   }
 }
 
-function onExamCodeInput(code) {
-  if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
-  STATE.progress.examCodes[STATE.exam.activeQ] = code;
+function onAssessmentCodeInput(type, code) {
+  const cfg = getAssessmentConfig(type);
+  if (!STATE.progress[cfg.propCodes]) STATE.progress[cfg.propCodes] = {};
+  STATE.progress[cfg.propCodes][cfg.stateActiveQ.activeQ] = code;
   saveProgress();
 }
 
-function resetExamCode() {
-  const qId = STATE.exam.activeQ;
-  const q = MODULES_DATA[STATE.currentModule].exam.find(item => item.id === qId);
+function resetAssessmentCode(type) {
+  const cfg = getAssessmentConfig(type);
+  const qId = cfg.stateActiveQ.activeQ;
+  const q = cfg.dataset.find(item => item.id === qId);
   
   if (q && confirm("Deseja voltar o código desta questão para o estado original?")) {
-    const editor = document.getElementById('exam-code-editor');
+    const editor = document.getElementById(cfg.editorId);
     if (editor) editor.value = q.starterCode;
     
-    if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
-    STATE.progress.examCodes[qId] = q.starterCode;
+    if (!STATE.progress[cfg.propCodes]) STATE.progress[cfg.propCodes] = {};
+    STATE.progress[cfg.propCodes][qId] = q.starterCode;
     
-    if (STATE.progress.examResults) {
-      delete STATE.progress.examResults[qId];
+    if (STATE.progress[cfg.propResults]) {
+      delete STATE.progress[cfg.propResults][qId];
     }
     
     saveProgress();
     
-    const btn = document.getElementById(`exam-item-${qId}`);
+    const btn = document.getElementById(`${cfg.prefix}-item-${qId}`);
     if (btn) btn.classList.remove('completed');
     
-    const resultsPanel = document.getElementById('exam-results-panel');
+    const resultsPanel = document.getElementById(`${cfg.prefix}-results-panel`);
     if (resultsPanel) resultsPanel.classList.remove('visible');
   }
 }
 
-function runAndValidateExamCode() {
-  const qId = STATE.exam.activeQ;
-  const q = MODULES_DATA[STATE.currentModule].exam.find(item => item.id === qId);
-  const editor = document.getElementById('exam-code-editor');
+function runAndValidateAssessmentCode(type) {
+  const cfg = getAssessmentConfig(type);
+  const qId = cfg.stateActiveQ.activeQ;
+  const q = cfg.dataset.find(item => item.id === qId);
+  const editor = document.getElementById(cfg.editorId);
   
   if (!q || !editor) return;
   
   const code = editor.value;
-  if (!STATE.progress.examCodes) STATE.progress.examCodes = {};
-  STATE.progress.examCodes[qId] = code;
+  if (!STATE.progress[cfg.propCodes]) STATE.progress[cfg.propCodes] = {};
+  STATE.progress[cfg.propCodes][qId] = code;
   
-  const resultsPanel = document.getElementById('exam-results-panel');
+  const resultsPanel = document.getElementById(`${cfg.prefix}-results-panel`);
   if (!resultsPanel) return;
   
   resultsPanel.classList.add('visible');
@@ -1712,15 +1741,17 @@ function runAndValidateExamCode() {
     
     let varsStr = Object.entries(res.setup).map(([k, v]) => `${k} = ${typeof v === 'string' ? `'${v}'` : (v === true ? 'True' : (v === false ? 'False' : v))}`).join(', ');
     
+    const detailsId = `${cfg.prefix}-test-details-${idx}`;
+    
     return `
       <div class="test-case-row ${rowClass}">
         <div class="test-case-info">
           <span class="status-indicator ${indicatorClass}">${indicatorText}</span>
           <strong>${res.label}</strong> <span style="color: var(--text-light); font-size: 0.85rem;">(Entrada: ${varsStr})</span>
         </div>
-        <button class="toggle-details-btn" onclick="toggleTestDetails(${idx})">Ver Detalhes</button>
+        <button class="toggle-details-btn" onclick="toggleTestDetails('${detailsId}')">Ver Detalhes</button>
         
-        <div id="test-details-${idx}" class="test-case-details">
+        <div id="${detailsId}" class="test-case-details">
           <div><strong>Saída Esperada:</strong></div>
           <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0;">${res.expected || '(Vazio)'}</pre>
           <div><strong>Saída do Seu Código:</strong></div>
@@ -1739,13 +1770,11 @@ function runAndValidateExamCode() {
     </div>
   `;
   
-  // Atualiza resultados no estado
-  if (!STATE.progress.examResults) STATE.progress.examResults = {};
-  STATE.progress.examResults[qId] = allPass;
+  if (!STATE.progress[cfg.propResults]) STATE.progress[cfg.propResults] = {};
+  STATE.progress[cfg.propResults][qId] = allPass;
   saveProgress();
   
-  // Atualiza botão lateral
-  const btn = document.getElementById(`exam-item-${qId}`);
+  const btn = document.getElementById(`${cfg.prefix}-item-${qId}`);
   if (btn) {
     if (allPass) {
       btn.classList.add('completed');
@@ -1755,37 +1784,40 @@ function runAndValidateExamCode() {
   }
 }
 
-function openExamReview() {
-  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
-  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+function openAssessmentReview(type) {
+  const cfg = getAssessmentConfig(type);
+  const name1 = STATE.progress[cfg.propName1] ? STATE.progress[cfg.propName1].trim() : "";
+  const name2 = STATE.progress[cfg.propName2] ? STATE.progress[cfg.propName2].trim() : "";
   
   if (name1.length < 3) {
-    alert("Por favor, preencha o nome do Integrante 1 antes de revisar a avaliação!");
+    alert(`Por favor, preencha o nome do Integrante 1 antes de revisar a ${cfg.titleLabel.toLowerCase()}!`);
     return;
   }
   
-  const modal = document.getElementById('exam-review-modal');
-  const infoDiv = document.getElementById('exam-review-student-info');
-  const listDiv = document.getElementById('exam-review-questions-list');
+  const modal = document.getElementById(`${cfg.prefix}-review-modal`);
+  const infoDiv = document.getElementById(`${cfg.prefix}-review-student-info`);
+  const listDiv = document.getElementById(`${cfg.prefix}-review-questions-list`);
   
   if (!modal || !infoDiv || !listDiv) return;
   
   let nameStr = name1;
   if (name2) nameStr += " e " + name2;
   
+  const isUnlocked = STATE.progress[cfg.propUnlocked];
+  
   infoDiv.innerHTML = `
     <div style="font-size: 1.1rem; color: var(--text-main);">
       Integrantes: <strong style="color: var(--primary-navy);">${nameStr}</strong>
     </div>
     <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
-      Código de Acesso Utilizado: <code>${STATE.progress.examUnlocked ? 'ecs101' : 'Não autenticado'}</code>
+      Código de Acesso Utilizado: <code>${isUnlocked ? (type === 'recovery' ? 'recupera101' : 'ecs101') : 'Não autenticado'}</code>
     </div>
   `;
   
   let html = "";
-  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
-    const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
-    const isCompleted = STATE.progress.examResults && STATE.progress.examResults[q.id];
+  cfg.dataset.forEach(q => {
+    const code = STATE.progress[cfg.propCodes] && STATE.progress[cfg.propCodes][q.id] ? STATE.progress[cfg.propCodes][q.id] : q.starterCode;
+    const isCompleted = STATE.progress[cfg.propResults] && STATE.progress[cfg.propResults][q.id];
     
     let statusBadge = `<span class="status-indicator fail">FALHANDO OU NÃO TESTADO</span>`;
     if (isCompleted) {
@@ -1807,10 +1839,9 @@ function openExamReview() {
   });
   listDiv.innerHTML = html;
   
-  // Adapta os botões de rodapé caso já tenha sido enviado (evita múltiplos envios de e-mail ao reabrir o relatório)
   const submitBtn = modal.querySelector('.modal-footer .primary-btn');
   const cancelBtn = modal.querySelector('.modal-footer .btn-secondary');
-  if (STATE.progress.examSubmitted) {
+  if (STATE.progress[cfg.propSubmitted]) {
     if (submitBtn) submitBtn.style.display = 'none';
     if (cancelBtn) cancelBtn.innerText = 'Fechar';
   } else {
@@ -1821,14 +1852,16 @@ function openExamReview() {
   modal.style.display = 'flex';
 }
 
-function closeExamReview() {
-  const modal = document.getElementById('exam-review-modal');
+function closeAssessmentReview(type) {
+  const cfg = getAssessmentConfig(type);
+  const modal = document.getElementById(`${cfg.prefix}-review-modal`);
   if (modal) modal.style.display = 'none';
 }
 
-function generateExamReportText() {
-  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
-  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+function generateAssessmentReportText(type) {
+  const cfg = getAssessmentConfig(type);
+  const name1 = STATE.progress[cfg.propName1] ? STATE.progress[cfg.propName1].trim() : "";
+  const name2 = STATE.progress[cfg.propName2] ? STATE.progress[cfg.propName2].trim() : "";
   let nameStr = name1;
   if (name2) nameStr += " & " + name2;
   if (!nameStr) nameStr = "Sem identificação";
@@ -1836,7 +1869,7 @@ function generateExamReportText() {
   const date = new Date().toLocaleString('pt-BR');
   
   let report = `==================================================\n`;
-  report += `RELATÓRIO DE AVALIAÇÃO - CONDICIONAIS 101\n`;
+  report += `RELATÓRIO DE ${cfg.titleLabel.toUpperCase()} - CONDICIONAIS 101\n`;
   report += `==================================================\n\n`;
   report += `Alunos/Dupla: ${nameStr}\n`;
   report += `Data de Entrega: ${date}\n`;
@@ -1847,17 +1880,17 @@ function generateExamReportText() {
   report += `--------------------------------------------------\n`;
   
   let totalCorrect = 0;
-  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
-    const passed = STATE.progress.examResults && STATE.progress.examResults[q.id];
+  cfg.dataset.forEach(q => {
+    const passed = STATE.progress[cfg.propResults] && STATE.progress[cfg.propResults][q.id];
     if (passed) totalCorrect++;
   });
   
-  report += `Questões Resolvidas: ${totalCorrect} de ${MODULES_DATA[STATE.currentModule].exam.length}\n`;
-  report += `Nota Estimada: ${(totalCorrect / MODULES_DATA[STATE.currentModule].exam.length * 10).toFixed(1)} / 10.0\n\n`;
+  report += `Questões Resolvidas: ${totalCorrect} de ${cfg.dataset.length}\n`;
+  report += `Nota Estimada: ${(totalCorrect / cfg.dataset.length * 10).toFixed(1)} / 10.0\n\n`;
   
-  MODULES_DATA[STATE.currentModule].exam.forEach(q => {
-    const code = STATE.progress.examCodes && STATE.progress.examCodes[q.id] ? STATE.progress.examCodes[q.id] : q.starterCode;
-    const passed = STATE.progress.examResults && STATE.progress.examResults[q.id] ? "PASSOU EM TODOS OS TESTES" : "NÃO PASSOU OU NÃO TESTADO";
+  cfg.dataset.forEach(q => {
+    const code = STATE.progress[cfg.propCodes] && STATE.progress[cfg.propCodes][q.id] ? STATE.progress[cfg.propCodes][q.id] : q.starterCode;
+    const passed = STATE.progress[cfg.propResults] && STATE.progress[cfg.propResults][q.id] ? "PASSOU EM TODOS OS TESTES" : "NÃO PASSOU OU NÃO TESTADO";
     
     report += `==================================================\n`;
     report += `${q.name}\n`;
@@ -1872,55 +1905,146 @@ function generateExamReportText() {
   return report;
 }
 
-function submitExamFinal() {
-  // Marca como submetido e salva
-  STATE.progress.examSubmitted = true;
+function submitAssessmentFinal(type) {
+  const cfg = getAssessmentConfig(type);
+  STATE.progress[cfg.propSubmitted] = true;
   saveProgress();
   
-  const reportText = generateExamReportText();
+  const reportText = generateAssessmentReportText(type);
   
-  // Atualiza textarea da cópia
-  const textarea = document.getElementById('exam-report-text-copy');
+  const textarea = document.getElementById(`${cfg.prefix}-report-text-copy`);
   if (textarea) textarea.value = reportText;
   
-  // Fecha o modal de revisão
-  closeExamReview();
+  closeAssessmentReview(type);
   
-  // Mostra a tela de sucesso
-  const contentCard = document.getElementById('exam-content-card');
-  const successCard = document.getElementById('exam-success-card');
+  const contentCard = document.getElementById(`${cfg.prefix}-content-card`);
+  const successCard = document.getElementById(`${cfg.prefix}-success-card`);
   if (contentCard && successCard) {
     contentCard.style.display = 'none';
     successCard.style.display = 'block';
   }
 
-  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
-  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+  const name1 = STATE.progress[cfg.propName1] ? STATE.progress[cfg.propName1].trim() : "";
+  const name2 = STATE.progress[cfg.propName2] ? STATE.progress[cfg.propName2].trim() : "";
   let nameStr = name1;
   if (name2) nameStr += " e " + name2;
   
-  const subjectText = `Avaliação 1 - ${nameStr}`;
+  const subjectText = `${cfg.emailSubject}${nameStr}`;
 
-  // Verifica se o EmailJS está configurado
   if (EMAILJS_CONFIG.templateId && EMAILJS_CONFIG.templateId !== "YOUR_TEMPLATE_ID" &&
       EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== "YOUR_PUBLIC_KEY") {
-    // Tenta envio automático silencioso em segundo plano
     sendEmailViaEmailJS(subjectText, reportText, nameStr);
   } else {
-    // Fallback: abre cliente de e-mail tradicional em nova guia
     fallbackMailto(subjectText, reportText);
   }
 }
 
-function retryMailtoSubmit() {
-  const reportText = generateExamReportText();
-  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim() : "";
-  const name2 = STATE.progress.examName2 ? STATE.progress.examName2.trim() : "";
+function retryMailtoAssessmentSubmit(type) {
+  const cfg = getAssessmentConfig(type);
+  const reportText = generateAssessmentReportText(type);
+  const name1 = STATE.progress[cfg.propName1] ? STATE.progress[cfg.propName1].trim() : "";
+  const name2 = STATE.progress[cfg.propName2] ? STATE.progress[cfg.propName2].trim() : "";
   let nameStr = name1;
   if (name2) nameStr += " e " + name2;
   
-  const subjectText = `Avaliação 1 - ${nameStr}`;
+  const subjectText = `${cfg.emailSubject}${nameStr}`;
   fallbackMailto(subjectText, reportText);
+}
+
+function copyAssessmentReportToClipboard(type) {
+  const cfg = getAssessmentConfig(type);
+  const textarea = document.getElementById(`${cfg.prefix}-report-text-copy`);
+  if (!textarea) return;
+  
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  
+  navigator.clipboard.writeText(textarea.value).then(() => {
+    const copyBtn = document.getElementById(`${cfg.prefix}-copy-btn`);
+    if (copyBtn) {
+      copyBtn.innerText = "Copiado! ✓";
+      copyBtn.style.backgroundColor = "var(--color-success-bg)";
+      copyBtn.style.color = "#065F46";
+      copyBtn.style.borderColor = "var(--color-success)";
+      
+      setTimeout(() => {
+        copyBtn.innerText = "Copiar Relatório 📋";
+        copyBtn.style.backgroundColor = "";
+        copyBtn.style.color = "";
+        copyBtn.style.borderColor = "";
+      }, 2500);
+    }
+  }).catch(err => {
+    alert("Falha ao copiar automaticamente: " + err);
+  });
+}
+
+function downloadAssessmentReportAsTxt(type) {
+  const cfg = getAssessmentConfig(type);
+  const reportText = generateAssessmentReportText(type);
+  const name1 = STATE.progress[cfg.propName1] ? STATE.progress[cfg.propName1].trim().replace(/\s+/g, "_") : "relatorio";
+  const name2 = STATE.progress[cfg.propName2] ? "_" + STATE.progress[cfg.propName2].trim().replace(/\s+/g, "_") : "";
+  const filename = `${cfg.filenamePrefix}${name1}${name2}.txt`;
+  
+  const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+async function resetSubmittedAssessment(type) {
+  const cfg = getAssessmentConfig(type);
+  const password = prompt(cfg.enterPromptMessage);
+  if (password === null) return;
+  
+  const hash = await sha256(password.trim());
+  
+  if (hash === cfg.hashProfessor) {
+    STATE.progress[cfg.propSubmitted] = false;
+    saveProgress();
+    alert(cfg.successResetSubmitMessage);
+    refreshAssessmentUI(type);
+  } else {
+    alert("Senha incorreta!");
+  }
+}
+
+async function resetEntireAssessment(type) {
+  const cfg = getAssessmentConfig(type);
+  const password = prompt(cfg.resetPromptMessage);
+  if (password === null) return;
+  
+  const hash = await sha256(password.trim());
+  
+  if (hash === cfg.hashProfessor) {
+    STATE.progress[cfg.propUnlocked] = false;
+    STATE.progress[cfg.propSubmitted] = false;
+    STATE.progress[cfg.propName1] = "";
+    STATE.progress[cfg.propName2] = "";
+    STATE.progress[cfg.propCodes] = {};
+    STATE.progress[cfg.propResults] = {};
+    saveProgress();
+    
+    const nameInput1 = document.getElementById(`${cfg.prefix}-student-name-1`);
+    const nameInput2 = document.getElementById(`${cfg.prefix}-student-name-2`);
+    if (nameInput1) nameInput1.value = "";
+    if (nameInput2) nameInput2.value = "";
+    
+    const pwdInput = document.getElementById(`${cfg.prefix}-password-input`);
+    if (pwdInput) pwdInput.value = "";
+    
+    alert(cfg.successMessage);
+    refreshAssessmentUI(type);
+  } else {
+    alert("Senha incorreta!");
+  }
 }
 
 function sendEmailViaEmailJS(subject, reportText, nameStr) {
@@ -1932,12 +2056,10 @@ function sendEmailViaEmailJS(subject, reportText, nameStr) {
       subject: subject,
       from_name: nameStr,
       message: reportText,
-      // Recipient Address variables to avoid "the recipients address is empty" error
       to_email: "euclidespaim@gmail.com",
       email: "euclidespaim@gmail.com",
       from_email: "euclidespaim@gmail.com",
       reply_to: "euclidespaim@gmail.com",
-      // Template placeholders from the user's template settings
       name: nameStr,
       title: subject
     }
@@ -1971,52 +2093,6 @@ function fallbackMailto(subject, reportText) {
   window.open(mailtoUrl, '_blank');
 }
 
-function copyExamReportToClipboard() {
-  const textarea = document.getElementById('exam-report-text-copy');
-  if (!textarea) return;
-  
-  textarea.select();
-  textarea.setSelectionRange(0, 99999); // Para mobile
-  
-  navigator.clipboard.writeText(textarea.value).then(() => {
-    const copyBtn = document.getElementById('exam-copy-btn');
-    if (copyBtn) {
-      copyBtn.innerText = "Copiado! ✓";
-      copyBtn.style.backgroundColor = "var(--color-success-bg)";
-      copyBtn.style.color = "#065F46";
-      copyBtn.style.borderColor = "var(--color-success)";
-      
-      setTimeout(() => {
-        copyBtn.innerText = "Copiar Relatório 📋";
-        copyBtn.style.backgroundColor = "";
-        copyBtn.style.color = "";
-        copyBtn.style.borderColor = "";
-      }, 2500);
-    }
-  }).catch(err => {
-    alert("Falha ao copiar automaticamente: " + err);
-  });
-}
-
-function downloadExamReportAsTxt() {
-  const reportText = generateExamReportText();
-  const name1 = STATE.progress.examName1 ? STATE.progress.examName1.trim().replace(/\s+/g, "_") : "avaliacao";
-  const name2 = STATE.progress.examName2 ? "_" + STATE.progress.examName2.trim().replace(/\s+/g, "_") : "";
-  const filename = `avaliacao_1_${name1}${name2}.txt`;
-  
-  const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
 function escapeHtml(text) {
   return text
     .replace(/&/g, "&amp;")
@@ -2026,7 +2102,43 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
-// Vincula funções do Exame ao escopo global (window)
+// --- CONTROLA WRAPPERS ESPECÍFICOS E SEUS VINCULOS DE INTERFACE ---
+
+function setupExam() { setupAssessment('exam'); }
+async function unlockExam() { await unlockAssessment('exam'); }
+function refreshExamUI() { refreshAssessmentUI('exam'); }
+function onExamNameChange() { onAssessmentNameChange('exam'); }
+function selectExamQuestion(qId) { selectAssessmentQuestion('exam', qId); }
+function onExamCodeInput(code) { onAssessmentCodeInput('exam', code); }
+function resetExamCode() { resetAssessmentCode('exam'); }
+function runAndValidateExamCode() { runAndValidateAssessmentCode('exam'); }
+function openExamReview() { openAssessmentReview('exam'); }
+function closeExamReview() { closeAssessmentReview('exam'); }
+function copyExamReportToClipboard() { copyAssessmentReportToClipboard('exam'); }
+function downloadExamReportAsTxt() { downloadAssessmentReportAsTxt('exam'); }
+async function resetSubmittedExam() { await resetSubmittedAssessment('exam'); }
+async function resetEntireExam() { await resetEntireAssessment('exam'); }
+function retryMailtoSubmit() { retryMailtoAssessmentSubmit('exam'); }
+function submitExamFinal() { submitAssessmentFinal('exam'); }
+
+function setupRecovery() { setupAssessment('recovery'); }
+async function unlockRecovery() { await unlockAssessment('recovery'); }
+function refreshRecoveryUI() { refreshAssessmentUI('recovery'); }
+function onRecoveryNameChange() { onAssessmentNameChange('recovery'); }
+function selectRecoveryQuestion(qId) { selectAssessmentQuestion('recovery', qId); }
+function onRecoveryCodeInput(code) { onAssessmentCodeInput('recovery', code); }
+function resetRecoveryCode() { resetAssessmentCode('recovery'); }
+function runAndValidateRecoveryCode() { runAndValidateAssessmentCode('recovery'); }
+function openRecoveryReview() { openAssessmentReview('recovery'); }
+function closeRecoveryReview() { closeAssessmentReview('recovery'); }
+function copyRecoveryReportToClipboard() { copyAssessmentReportToClipboard('recovery'); }
+function downloadRecoveryReportAsTxt() { downloadRecoveryReportAsTxt('recovery'); }
+async function resetSubmittedRecovery() { await resetSubmittedAssessment('recovery'); }
+async function resetEntireRecovery() { await resetEntireAssessment('recovery'); }
+function retryMailtoRecoverySubmit() { retryMailtoAssessmentSubmit('recovery'); }
+function submitRecoveryFinal() { submitAssessmentFinal('recovery'); }
+
+// Vincula funções da Avaliação ao escopo global (window)
 window.unlockExam = unlockExam;
 window.onExamNameChange = onExamNameChange;
 window.selectExamQuestion = selectExamQuestion;
@@ -2041,629 +2153,8 @@ window.downloadExamReportAsTxt = downloadExamReportAsTxt;
 window.retryMailtoSubmit = retryMailtoSubmit;
 window.setupExam = setupExam;
 window.refreshExamUI = refreshExamUI;
-
-async function resetSubmittedExam() {
-  const password = prompt("Digite a senha do professor para liberar uma nova tentativa de envio:");
-  if (password === null) return;
-  
-  const hash = await sha256(password.trim());
-  // Hash correspondente a "liberar101"
-  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3";
-  
-  if (hash === expectedHash) {
-    STATE.progress.examSubmitted = false;
-    saveProgress();
-    alert("Avaliação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los.");
-    refreshExamUI();
-  } else {
-    alert("Senha incorreta!");
-  }
-}
 window.resetSubmittedExam = resetSubmittedExam;
-
-async function resetEntireExam() {
-  const password = prompt("Digite a senha do professor para RESETAR COMPLETAMENTE a avaliação (apaga nomes e códigos):");
-  if (password === null) return;
-  
-  const hash = await sha256(password.trim());
-  // Hash correspondente a "liberar101"
-  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3";
-  
-  if (hash === expectedHash) {
-    STATE.progress.examUnlocked = false;
-    STATE.progress.examSubmitted = false;
-    STATE.progress.examName1 = "";
-    STATE.progress.examName2 = "";
-    STATE.progress.examCodes = {};
-    STATE.progress.examResults = {};
-    saveProgress();
-    
-    // Limpa campos na UI
-    const nameInput1 = document.getElementById('exam-student-name-1');
-    const nameInput2 = document.getElementById('exam-student-name-2');
-    if (nameInput1) nameInput1.value = "";
-    if (nameInput2) nameInput2.value = "";
-    
-    const pwdInput = document.getElementById('exam-password-input');
-    if (pwdInput) pwdInput.value = "";
-    
-    alert("Avaliação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados.");
-    refreshExamUI();
-  } else {
-    alert("Senha incorreta!");
-  }
-}
 window.resetEntireExam = resetEntireExam;
-
-// --- SISTEMA DA AVALIAÇÃO DE RECUPERAÇÃO ---
-
-function setupRecovery() {
-  const listContainer = document.getElementById('recovery-list-container');
-  if (!listContainer) return;
-  
-  // Limpa e gera lista lateral de questões
-  let html = "";
-  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
-    const isCompleted = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id];
-    const completedClass = isCompleted ? 'completed' : '';
-    const activeClass = q.id === STATE.recovery.activeQ ? 'active' : '';
-    
-    html += `
-      <button class="challenge-item ${activeClass} ${completedClass}" id="recovery-item-${q.id}" onclick="selectRecoveryQuestion(${q.id})">
-        Questão ${q.id}: ${q.name.split(':')[1].trim()}
-      </button>
-    `;
-  });
-  listContainer.innerHTML = html;
-  
-  // Carrega os nomes se já estiverem salvos
-  const nameInput1 = document.getElementById('recovery-student-name-1');
-  const nameInput2 = document.getElementById('recovery-student-name-2');
-  if (nameInput1) nameInput1.value = STATE.progress.recoveryName1 || "";
-  if (nameInput2) nameInput2.value = STATE.progress.recoveryName2 || "";
-
-  // Habilita inserção de Tab como 4 espaços
-  enableTabKeyPress('recovery-code-editor', onRecoveryCodeInput);
-}
-
-async function unlockRecovery() {
-  const pwdInput = document.getElementById('recovery-password-input');
-  const errorDiv = document.getElementById('recovery-auth-error');
-  
-  if (!pwdInput) return;
-  
-  const enteredPassword = pwdInput.value.trim();
-  const hash = await sha256(enteredPassword);
-  
-  // Hash correspondente a "recupera101"
-  const expectedHash = "ba27e959b3d789cf33ce71d6a5d9fecf20b5808e3224c049c7d77f6bb713710d";
-  
-  if (hash === expectedHash) {
-    STATE.progress.recoveryUnlocked = true;
-    if (errorDiv) errorDiv.style.display = 'none';
-    saveProgress();
-    refreshRecoveryUI();
-  } else {
-    if (errorDiv) errorDiv.style.display = 'block';
-    pwdInput.value = "";
-    pwdInput.focus();
-  }
-}
-
-function refreshRecoveryUI() {
-  const authCard = document.getElementById('recovery-auth-card');
-  const contentCard = document.getElementById('recovery-content-card');
-  const successCard = document.getElementById('recovery-success-card');
-  const questionsArea = document.getElementById('recovery-questions-area');
-  const nameInput1 = document.getElementById('recovery-student-name-1');
-  const nameInput2 = document.getElementById('recovery-student-name-2');
-  
-  if (!authCard || !contentCard) return;
-  
-  // Se o aluno já concluiu/enviou a recuperação, pula direto para a tela de sucesso
-  if (STATE.progress.recoverySubmitted) {
-    authCard.style.display = 'none';
-    contentCard.style.display = 'none';
-    if (successCard) successCard.style.display = 'block';
-    
-    const textarea = document.getElementById('recovery-report-text-copy');
-    if (textarea) textarea.value = generateRecoveryReportText();
-    return;
-  }
-  
-  if (STATE.progress.recoveryUnlocked) {
-    authCard.style.display = 'none';
-    contentCard.style.display = 'block';
-    if (successCard) successCard.style.display = 'none';
-    
-    const name1 = STATE.progress.recoveryName1 || "";
-    const name2 = STATE.progress.recoveryName2 || "";
-    if (nameInput1) nameInput1.value = name1;
-    if (nameInput2) nameInput2.value = name2;
-    
-    if (name1.trim().length > 2) {
-      if (questionsArea) questionsArea.style.display = 'block';
-      loadRecoveryQuestion(STATE.recovery.activeQ);
-    } else {
-      if (questionsArea) questionsArea.style.display = 'none';
-    }
-  } else {
-    authCard.style.display = 'block';
-    contentCard.style.display = 'none';
-    if (successCard) successCard.style.display = 'none';
-  }
-}
-
-function onRecoveryNameChange() {
-  const name1 = document.getElementById('recovery-student-name-1').value;
-  const name2 = document.getElementById('recovery-student-name-2').value;
-  
-  STATE.progress.recoveryName1 = name1;
-  STATE.progress.recoveryName2 = name2;
-  saveProgress();
-  
-  const questionsArea = document.getElementById('recovery-questions-area');
-  if (name1.trim().length > 2) {
-    if (questionsArea) questionsArea.style.display = 'block';
-    loadRecoveryQuestion(STATE.recovery.activeQ);
-  } else {
-    if (questionsArea) questionsArea.style.display = 'none';
-  }
-}
-
-function selectRecoveryQuestion(qId) {
-  STATE.recovery.activeQ = qId;
-  
-  // Atualiza botões laterais
-  document.querySelectorAll('#recovery-list-container .challenge-item').forEach(btn => {
-    const btnId = parseInt(btn.id.replace('recovery-item-', ''));
-    btn.classList.remove('active');
-    if (btnId === qId) {
-      btn.classList.add('active');
-    }
-  });
-  
-  loadRecoveryQuestion(qId);
-}
-
-function loadRecoveryQuestion(qId) {
-  const q = MODULES_DATA[STATE.currentModule].recovery.find(item => item.id === qId);
-  if (!q) return;
-  
-  const qTitle = document.getElementById('recovery-q-title');
-  const qDesc = document.getElementById('recovery-q-description');
-  const editor = document.getElementById('recovery-code-editor');
-  const resultsPanel = document.getElementById('recovery-results-panel');
-  
-  if (qTitle && qDesc && editor) {
-    qTitle.innerHTML = q.name;
-    qDesc.innerHTML = q.description;
-    
-    // Carrega o código do estado ou inicial
-    if (STATE.progress.recoveryCodes && STATE.progress.recoveryCodes[qId] !== undefined) {
-      editor.value = STATE.progress.recoveryCodes[qId];
-    } else {
-      editor.value = q.starterCode;
-    }
-    
-    // Atualiza destaque
-    const pre = editor.nextElementSibling;
-    if (pre) {
-      updateEditorHighlight(editor, pre);
-    }
-  }
-  
-  if (resultsPanel) {
-    resultsPanel.classList.remove('visible');
-  }
-}
-
-function onRecoveryCodeInput(code) {
-  if (!STATE.progress.recoveryCodes) STATE.progress.recoveryCodes = {};
-  STATE.progress.recoveryCodes[STATE.recovery.activeQ] = code;
-  saveProgress();
-}
-
-function resetRecoveryCode() {
-  const qId = STATE.recovery.activeQ;
-  const q = MODULES_DATA[STATE.currentModule].recovery.find(item => item.id === qId);
-  
-  if (q && confirm("Deseja voltar o código desta questão para o estado original?")) {
-    const editor = document.getElementById('recovery-code-editor');
-    if (editor) editor.value = q.starterCode;
-    
-    if (!STATE.progress.recoveryCodes) STATE.progress.recoveryCodes = {};
-    STATE.progress.recoveryCodes[qId] = q.starterCode;
-    
-    if (STATE.progress.recoveryResults) {
-      delete STATE.progress.recoveryResults[qId];
-    }
-    
-    saveProgress();
-    
-    const btn = document.getElementById(`recovery-item-${qId}`);
-    if (btn) btn.classList.remove('completed');
-    
-    const resultsPanel = document.getElementById('recovery-results-panel');
-    if (resultsPanel) resultsPanel.classList.remove('visible');
-  }
-}
-
-function runAndValidateRecoveryCode() {
-  const qId = STATE.recovery.activeQ;
-  const q = MODULES_DATA[STATE.currentModule].recovery.find(item => item.id === qId);
-  const editor = document.getElementById('recovery-code-editor');
-  
-  if (!q || !editor) return;
-  
-  const code = editor.value;
-  if (!STATE.progress.recoveryCodes) STATE.progress.recoveryCodes = {};
-  STATE.progress.recoveryCodes[qId] = code;
-  
-  const resultsPanel = document.getElementById('recovery-results-panel');
-  if (!resultsPanel) return;
-  
-  resultsPanel.classList.add('visible');
-  resultsPanel.innerHTML = "";
-  
-  let allPass = true;
-  let testCaseResults = [];
-  let compileError = null;
-  
-  for (let test of q.testCases) {
-    const result = runPython(code, test.setupVariables);
-    
-    if (!result.success) {
-      compileError = result.error;
-      allPass = false;
-      break;
-    }
-    
-    const actual = result.output.trim();
-    const expected = test.expectedOutput.trim();
-    const isPass = actual === expected;
-    
-    if (!isPass) {
-      allPass = false;
-    }
-    
-    testCaseResults.push({
-      label: test.label,
-      setup: test.setupVariables,
-      expected: expected,
-      actual: actual,
-      pass: isPass
-    });
-  }
-  
-  if (compileError) {
-    resultsPanel.innerHTML = `
-      <div class="results-header" style="color: var(--color-error)">
-        ⚠️ Erro Encontrado no Código:
-      </div>
-      <div class="compiler-error-box">${compileError}</div>
-      <p style="font-size: 0.9rem; color: var(--text-light);">
-        Revise seu código, corrija as regras de indentação do Python e tente novamente.
-      </p>
-    `;
-    return;
-  }
-  
-  let headerColor = allPass ? 'var(--color-success)' : 'var(--color-error)';
-  let headerText = allPass ? '🎉 Parabéns! Código validado com sucesso!' : '❌ Ops! Seu código falhou em alguns testes de validação.';
-  
-  let rowsHtml = testCaseResults.map((res, idx) => {
-    let rowClass = res.pass ? 'pass' : 'fail';
-    let indicatorClass = res.pass ? 'pass' : 'fail';
-    let indicatorText = res.pass ? 'SUCESSO' : 'FALHOU';
-    
-    let varsStr = Object.entries(res.setup).map(([k, v]) => `${k} = ${typeof v === 'string' ? `'${v}'` : (v === true ? 'True' : (v === false ? 'False' : v))}`).join(', ');
-    
-    return `
-      <div class="test-case-row ${rowClass}">
-        <div class="test-case-info">
-          <span class="status-indicator ${indicatorClass}">${indicatorText}</span>
-          <strong>${res.label}</strong> <span style="color: var(--text-light); font-size: 0.85rem;">(Entrada: ${varsStr})</span>
-        </div>
-        <button class="toggle-details-btn" onclick="toggleTestDetails(${idx})">Ver Detalhes</button>
-        
-        <div id="test-details-${idx}" class="test-case-details">
-          <div><strong>Saída Esperada:</strong></div>
-          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0;">${res.expected || '(Vazio)'}</pre>
-          <div><strong>Saída do Seu Código:</strong></div>
-          <pre style="background: #FFFFFF; padding: 4px; border: 1px solid #CBD5E1; margin: 4px 0; color: ${res.pass ? 'green' : 'red'};">${res.actual || '(Vazio)'}</pre>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  resultsPanel.innerHTML = `
-    <div class="results-header" style="color: ${headerColor}">
-      ${headerText}
-    </div>
-    <div class="test-cases-summary">
-      ${rowsHtml}
-    </div>
-  `;
-  
-  // Atualiza resultados no estado
-  if (!STATE.progress.recoveryResults) STATE.progress.recoveryResults = {};
-  STATE.progress.recoveryResults[qId] = allPass;
-  saveProgress();
-  
-  // Atualiza botão lateral
-  const btn = document.getElementById(`recovery-item-${qId}`);
-  if (btn) {
-    if (allPass) {
-      btn.classList.add('completed');
-    } else {
-      btn.classList.remove('completed');
-    }
-  }
-}
-
-function openRecoveryReview() {
-  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
-  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
-  
-  if (name1.length < 3) {
-    alert("Por favor, preencha o nome do Integrante 1 antes de revisar a prova de recuperação!");
-    return;
-  }
-  
-  const modal = document.getElementById('recovery-review-modal');
-  const infoDiv = document.getElementById('recovery-review-student-info');
-  const listDiv = document.getElementById('recovery-review-questions-list');
-  
-  if (!modal || !infoDiv || !listDiv) return;
-  
-  let nameStr = name1;
-  if (name2) nameStr += " e " + name2;
-  
-  infoDiv.innerHTML = `
-    <div style="font-size: 1.1rem; color: var(--text-main);">
-      Integrantes: <strong style="color: var(--primary-navy);">${nameStr}</strong>
-    </div>
-    <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
-      Código de Acesso Utilizado: <code>${STATE.progress.recoveryUnlocked ? 'recupera101' : 'Não autenticado'}</code>
-    </div>
-  `;
-  
-  let html = "";
-  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
-    const code = STATE.progress.recoveryCodes && STATE.progress.recoveryCodes[q.id] ? STATE.progress.recoveryCodes[q.id] : q.starterCode;
-    const isCompleted = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id];
-    
-    let statusBadge = `<span class="status-indicator fail">FALHANDO OU NÃO TESTADO</span>`;
-    if (isCompleted) {
-      statusBadge = `<span class="status-indicator pass">VALIDADO COM SUCESSO (PASSOU NOS TESTES)</span>`;
-    }
-    
-    html += `
-      <div class="review-q-item">
-        <div class="review-q-header">
-          <span>${q.name}</span>
-          ${statusBadge}
-        </div>
-        <div class="review-q-body">
-          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-light);">Código Desenvolvido:</div>
-          <pre class="review-q-code">${escapeHtml(code)}</pre>
-        </div>
-      </div>
-    `;
-  });
-  listDiv.innerHTML = html;
-  
-  // Adapta os botões de rodapé caso já tenha sido enviado (evita múltiplos envios de e-mail ao reabrir o relatório)
-  const submitBtn = modal.querySelector('.modal-footer .primary-btn');
-  const cancelBtn = modal.querySelector('.modal-footer .btn-secondary');
-  if (STATE.progress.recoverySubmitted) {
-    if (submitBtn) submitBtn.style.display = 'none';
-    if (cancelBtn) cancelBtn.innerText = 'Fechar';
-  } else {
-    if (submitBtn) submitBtn.style.display = 'flex';
-    if (cancelBtn) cancelBtn.innerText = 'Voltar à Prova';
-  }
-  
-  modal.style.display = 'flex';
-}
-
-function closeRecoveryReview() {
-  const modal = document.getElementById('recovery-review-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-function generateRecoveryReportText() {
-  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
-  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
-  let nameStr = name1;
-  if (name2) nameStr += " & " + name2;
-  if (!nameStr) nameStr = "Sem identificação";
-  
-  const date = new Date().toLocaleString('pt-BR');
-  
-  let report = `==================================================\n`;
-  report += `RELATÓRIO DE RECUPERAÇÃO - CONDICIONAIS 101\n`;
-  report += `==================================================\n\n`;
-  report += `Alunos/Dupla: ${nameStr}\n`;
-  report += `Data de Entrega: ${date}\n`;
-  report += `Repositório: https://github.com/euclidespaim/ecs-101\n\n`;
-  
-  report += `--------------------------------------------------\n`;
-  report += `DESEMPENHO GERAL:\n`;
-  report += `--------------------------------------------------\n`;
-  
-  let totalCorrect = 0;
-  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
-    const passed = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id];
-    if (passed) totalCorrect++;
-  });
-  
-  report += `Questões Resolvidas: ${totalCorrect} de ${MODULES_DATA[STATE.currentModule].recovery.length}\n`;
-  report += `Nota Estimada: ${(totalCorrect / MODULES_DATA[STATE.currentModule].recovery.length * 10).toFixed(1)} / 10.0\n\n`;
-  
-  MODULES_DATA[STATE.currentModule].recovery.forEach(q => {
-    const code = STATE.progress.recoveryCodes && STATE.progress.recoveryCodes[q.id] ? STATE.progress.recoveryCodes[q.id] : q.starterCode;
-    const passed = STATE.progress.recoveryResults && STATE.progress.recoveryResults[q.id] ? "PASSOU EM TODOS OS TESTES" : "NÃO PASSOU OU NÃO TESTADO";
-    
-    report += `==================================================\n`;
-    report += `${q.name}\n`;
-    report += `Status: ${passed}\n`;
-    report += `--------------------------------------------------\n`;
-    report += `CÓDIGO ENVIADO:\n`;
-    report += `--------------------------------------------------\n`;
-    report += `${code}\n`;
-    report += `==================================================\n\n`;
-  });
-  
-  return report;
-}
-
-function submitRecoveryFinal() {
-  // Marca como submetido e salva
-  STATE.progress.recoverySubmitted = true;
-  saveProgress();
-  
-  const reportText = generateRecoveryReportText();
-  
-  // Atualiza textarea da cópia
-  const textarea = document.getElementById('recovery-report-text-copy');
-  if (textarea) textarea.value = reportText;
-  
-  // Fecha o modal de revisão
-  closeRecoveryReview();
-  
-  // Mostra a tela de sucesso
-  const contentCard = document.getElementById('recovery-content-card');
-  const successCard = document.getElementById('recovery-success-card');
-  if (contentCard && successCard) {
-    contentCard.style.display = 'none';
-    successCard.style.display = 'block';
-  }
-
-  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
-  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
-  let nameStr = name1;
-  if (name2) nameStr += " e " + name2;
-  
-  const subjectText = `Prova de Recuperação - ${nameStr}`;
-
-  // Verifica se o EmailJS está configurado
-  if (EMAILJS_CONFIG.templateId && EMAILJS_CONFIG.templateId !== "YOUR_TEMPLATE_ID" &&
-      EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== "YOUR_PUBLIC_KEY") {
-    // Tenta envio automático silencioso em segundo plano
-    sendEmailViaEmailJS(subjectText, reportText, nameStr);
-  } else {
-    // Fallback: abre cliente de e-mail tradicional em nova guia
-    fallbackMailto(subjectText, reportText);
-  }
-}
-
-function retryMailtoRecoverySubmit() {
-  const reportText = generateRecoveryReportText();
-  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim() : "";
-  const name2 = STATE.progress.recoveryName2 ? STATE.progress.recoveryName2.trim() : "";
-  let nameStr = name1;
-  if (name2) nameStr += " e " + name2;
-  
-  const subjectText = `Prova de Recuperação - ${nameStr}`;
-  fallbackMailto(subjectText, reportText);
-}
-
-function copyRecoveryReportToClipboard() {
-  const textarea = document.getElementById('recovery-report-text-copy');
-  if (!textarea) return;
-  
-  textarea.select();
-  textarea.setSelectionRange(0, 99999); // Para mobile
-  
-  navigator.clipboard.writeText(textarea.value).then(() => {
-    const copyBtn = document.getElementById('recovery-copy-btn');
-    if (copyBtn) {
-      copyBtn.innerText = "Copiado! ✓";
-      copyBtn.style.backgroundColor = "var(--color-success-bg)";
-      copyBtn.style.color = "#065F46";
-      copyBtn.style.borderColor = "var(--color-success)";
-      
-      setTimeout(() => {
-        copyBtn.innerText = "Copiar Relatório 📋";
-        copyBtn.style.backgroundColor = "";
-        copyBtn.style.color = "";
-        copyBtn.style.borderColor = "";
-      }, 2500);
-    }
-  }).catch(err => {
-    alert("Falha ao copiar automaticamente: " + err);
-  });
-}
-
-function downloadRecoveryReportAsTxt() {
-  const reportText = generateRecoveryReportText();
-  const name1 = STATE.progress.recoveryName1 ? STATE.progress.recoveryName1.trim().replace(/\s+/g, "_") : "recuperacao";
-  const name2 = STATE.progress.recoveryName2 ? "_" + STATE.progress.recoveryName2.trim().replace(/\s+/g, "_") : "";
-  const filename = `recuperacao_1_${name1}${name2}.txt`;
-  
-  const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-async function resetSubmittedRecovery() {
-  const password = prompt("Digite a senha do professor para liberar uma nova tentativa de envio da recuperação:");
-  if (password === null) return;
-  
-  const hash = await sha256(password.trim());
-  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3"; // "liberar101"
-  
-  if (hash === expectedHash) {
-    STATE.progress.recoverySubmitted = false;
-    saveProgress();
-    alert("Recuperação liberada com sucesso! Os códigos anteriores foram mantidos para que a dupla possa revisá-los ou editá-los.");
-    refreshRecoveryUI();
-  } else {
-    alert("Senha incorreta!");
-  }
-}
-
-async function resetEntireRecovery() {
-  const password = prompt("Digite a senha do professor para RESETAR COMPLETAMENTE a recuperação (apaga nomes e códigos):");
-  if (password === null) return;
-  
-  const hash = await sha256(password.trim());
-  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3"; // "liberar101"
-  
-  if (hash === expectedHash) {
-    STATE.progress.recoveryUnlocked = false;
-    STATE.progress.recoverySubmitted = false;
-    STATE.progress.recoveryName1 = "";
-    STATE.progress.recoveryName2 = "";
-    STATE.progress.recoveryCodes = {};
-    STATE.progress.recoveryResults = {};
-    saveProgress();
-    
-    // Limpa campos na UI
-    const nameInput1 = document.getElementById('recovery-student-name-1');
-    const nameInput2 = document.getElementById('recovery-student-name-2');
-    if (nameInput1) nameInput1.value = "";
-    if (nameInput2) nameInput2.value = "";
-    
-    const pwdInput = document.getElementById('recovery-password-input');
-    if (pwdInput) pwdInput.value = "";
-    
-    alert("Prova de recuperação resetada com sucesso! A seção foi bloqueada e todos os dados foram apagados.");
-    refreshRecoveryUI();
-  } else {
-    alert("Senha incorreta!");
-  }
-}
 
 // Vincula funções da Recuperação ao escopo global (window)
 window.unlockRecovery = unlockRecovery;
