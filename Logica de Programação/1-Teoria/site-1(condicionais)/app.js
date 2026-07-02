@@ -2135,8 +2135,8 @@ async function unlockRecovery() {
   const enteredPassword = pwdInput.value.trim();
   const hash = await sha256(enteredPassword);
   
-  // Hash correspondente a "professor101"
-  const expectedHash = "08c27d176d710371afef9924eb32c012803eef04a6647d3febf69422f27a294b";
+  // Hash correspondente a "recupera101"
+  const expectedHash = "ba27e959b3d789cf33ce71d6a5d9fecf20b5808e3224c049c7d77f6bb713710d";
   
   if (hash === expectedHash) {
     STATE.progress.recoveryUnlocked = true;
@@ -2425,7 +2425,7 @@ function openRecoveryReview() {
       Integrantes: <strong style="color: var(--primary-navy);">${nameStr}</strong>
     </div>
     <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">
-      Código de Acesso Utilizado: <code>${STATE.progress.recoveryUnlocked ? 'ecs101' : 'Não autenticado'}</code>
+      Código de Acesso Utilizado: <code>${STATE.progress.recoveryUnlocked ? 'recupera101' : 'Não autenticado'}</code>
     </div>
   `;
   
