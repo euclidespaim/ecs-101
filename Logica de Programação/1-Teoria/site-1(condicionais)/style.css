@@ -1383,3 +1383,9 @@ main {
     margin-bottom: 1rem;
   }
 }
+
+/* Aumenta a altura dos editores de código da avaliação e recuperação */
+#exam-tab .editor-wrapper,
+#recovery-tab .editor-wrapper {
+  height: 350px;
+}
