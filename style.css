@@ -1306,3 +1306,80 @@ main {
 .hl-variable {
   color: #93C5FD !important;
 }
+
+/* --- Layout da Sidebar (Menu Sanfona) --- */
+.app-container {
+  display: flex;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 2rem;
+  padding: 0 1rem;
+}
+
+main {
+  flex-grow: 1;
+  max-width: 1200px;
+  width: 100%;
+}
+
+.app-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  margin-top: 2rem;
+}
+
+.sidebar-header h2 {
+  font-family: var(--font-title);
+  color: var(--primary-navy);
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.accordion-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.accordion-item {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  border-radius: var(--border-radius-sm);
+  text-align: left;
+  font-family: var(--font-title);
+  font-weight: 600;
+  color: var(--text-light);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.accordion-item:hover {
+  background-color: #F1F5F9;
+  color: var(--primary-navy);
+  transform: translateX(4px);
+}
+
+.accordion-item.active {
+  background-color: var(--primary-navy);
+  color: #FFFFFF;
+  border-color: var(--primary-navy);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 900px) {
+  .app-container {
+    flex-direction: column;
+  }
+  .app-sidebar {
+    width: 100%;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+}
