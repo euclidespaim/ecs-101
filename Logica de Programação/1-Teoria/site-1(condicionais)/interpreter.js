@@ -1,6 +1,6 @@
 /**
  * Mini-interpretador Python para JavaScript
- * Projetado para validar e executar estruturas condicionais básicas (if, elif, else, print, atribuições)
+ * Projetado para validar e executar estruturas condicionais básicas (if, elif, else, print, atribuições, laços for)
  * com foco educacional (fornece mensagens de erro extremamente didáticas).
  */
 
@@ -8,6 +8,7 @@ function translateCondition(cond) {
   let result = "";
   let inString = false;
   let strChar = null;
+  let isFString = false;
   let i = 0;
   
   function isWordChar(char) {
@@ -17,22 +18,41 @@ function translateCondition(cond) {
   while (i < cond.length) {
     let char = cond[i];
     
-    // Trata aspas para evitar substituições indesejadas dentro de strings
+    // Reconhece início de f-string: f" ou f'
+    if (!inString && (char === 'f' || char === 'F') && (cond[i+1] === '"' || cond[i+1] === "'") && (i === 0 || !isWordChar(cond[i-1]))) {
+      isFString = true;
+      strChar = cond[i+1];
+      inString = true;
+      result += "`";
+      i += 2;
+      continue;
+    }
+    
+    // Trata aspas normais e de f-string
     if ((char === '"' || char === "'") && (i === 0 || cond[i-1] !== '\\')) {
       if (!inString) {
         inString = true;
         strChar = char;
+        isFString = false;
+        result += char;
       } else if (char === strChar) {
         inString = false;
         strChar = null;
+        result += isFString ? "`" : char;
+        isFString = false;
+      } else {
+        result += char;
       }
-      result += char;
       i++;
       continue;
     }
     
     if (inString) {
-      result += char;
+      if (isFString && char === '{') {
+        result += "${";
+      } else {
+        result += char;
+      }
       i++;
     } else {
       let sub = cond.slice(i);
@@ -81,7 +101,7 @@ function runPython(code, initialVars = {}) {
   let indentStack = [0];
   let previousWasColon = false;
   let lastLineCodeIndent = 0;
-  let hasExecutedConditional = false; // to track if they used if/elif/else
+  let hasExecutedConditional = false;
   
   // Buffer de saída
   let outputBuffer = "";
@@ -95,11 +115,32 @@ function runPython(code, initialVars = {}) {
       return arg.toString();
     }).join(" ") + "\n";
   }
+
+  let inputQueue = Array.isArray(initialVars.inputs) ? [...initialVars.inputs] : [];
+
+  function __input(promptMsg) {
+    if (inputQueue.length > 0) {
+      return String(inputQueue.shift());
+    }
+    return "0";
+  }
+
+  function __int(val) {
+    let num = parseInt(val, 10);
+    return isNaN(num) ? 0 : num;
+  }
+
+  function __str(val) {
+    return String(val);
+  }
   
   // Variáveis do ambiente local
   let env = { 
     ...initialVars,
-    print: __print
+    print: __print,
+    input: __input,
+    int: __int,
+    str: __str
   };
   
   try {
@@ -251,36 +292,42 @@ function runPython(code, initialVars = {}) {
         if (rangeMatch) {
           let start = rangeMatch[2] ? rangeMatch[1].trim() : '0';
           let end = rangeMatch[2] ? rangeMatch[2].trim() : rangeMatch[1].trim();
-          lineJs = `for (let ${iterator} = ${translateCondition(start)}; ${iterator} < ${translateCondition(end)}; ${iterator}++) {\n`;
+          lineJs = `for (${iterator} = ${translateCondition(start)}; ${iterator} < ${translateCondition(end)}; ${iterator}++) {\n`;
         } else {
-          lineJs = `for (let ${iterator} of ${translateCondition(iterable)}) {\n`;
+          lineJs = `for (${iterator} of ${translateCondition(iterable)}) {\n`;
         }
       } else if (trimmed === 'else:') {
         hasExecutedConditional = true;
         lineJs = `else {\n`;
       } else if (trimmed.startsWith('print(') && trimmed.endsWith(')')) {
         let printContent = trimmed.substring(6, trimmed.length - 1).trim();
-        lineJs = `print(${printContent});\n`;
+        lineJs = `print(${translateCondition(printContent)});\n`;
       } else {
-        // Trata atribuições simples, ex: pontos = 150 (impede de bater em comparações com ==)
+        let opMatch = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*(\+=|-=|\*=|\/=)\s*(.*)$/);
         let match = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*([^=].*|)$/);
-        if (match) {
+        if (opMatch) {
+          let varName = opMatch[1];
+          let op = opMatch[2];
+          let expr = opMatch[3].trim();
+          let translatedExpr = translateCondition(expr);
+          if (!(varName in env)) {
+            env[varName] = undefined;
+          }
+          lineJs = `${varName} ${op} ${translatedExpr};\n`;
+        } else if (match) {
           let varName = match[1];
           let expr = match[2].trim();
           let translatedExpr = translateCondition(expr);
           
-          // Se a variável é fornecida como entrada do caso de teste, ignoramos a atribuição no código
-          // para que o valor dinâmico do teste prevaleça.
-          if (varName in initialVars) {
+          if (varName in initialVars && initialVars[varName] !== undefined && !Array.isArray(initialVars[varName])) {
             lineJs = `// Variável de entrada ${varName} mantida com o valor do teste: ${initialVars[varName]}\n`;
-          } else if (!(varName in env)) {
-            lineJs = `let ${varName} = ${translatedExpr};\n`;
-            env[varName] = undefined; 
           } else {
+            if (!(varName in env)) {
+              env[varName] = undefined; 
+            }
             lineJs = `${varName} = ${translatedExpr};\n`;
           }
         } else {
-          // Expressões gerais como cálculos simples
           lineJs = translateCondition(trimmed) + ";\n";
         }
       }

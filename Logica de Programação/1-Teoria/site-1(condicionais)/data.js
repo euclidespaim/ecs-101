@@ -530,6 +530,40 @@ senha_correta = False
           { id: 1, label: "Caso 1", setupVariables: { inicio: 10, fim: 13 }, expectedOutput: "10\n11\n12\n" },
           { id: 2, label: "Caso 2", setupVariables: { inicio: 5, fim: 7 }, expectedOutput: "5\n6\n" }
         ]
+      },
+      {
+        level: 4,
+        name: "Nível 4: A Busca por Suprimentos 🏕️",
+        description: "<strong>Cenário:</strong> O mundo como o conhecemos acabou e você está abrigado em uma zona segura. A comida está acabando e você precisa sair para explorar as ruínas da cidade durante 5 dias seguidos.<br><br>" +
+                     "<strong>Sua Missão:</strong><br>" +
+                     "1. Crie uma variável chamada <code>total_comida</code> começando com o valor <code>0</code>.<br>" +
+                     "2. Utilize um laço <code>for</code> com a função <code>range()</code> para simular os 5 dias de busca.<br>" +
+                     "3. Dentro do laço, pergunte ao usuário (com <code>input()</code> e <code>int()</code>): \"Quantas latas de comida encontrou no dia X?\"<br>" +
+                     "4. Adicione esse valor à variável <code>total_comida</code>.<br>" +
+                     "5. Fora do laço, no final do programa, utilize um <code>if/else</code>:<br>" +
+                     "• Se o total for maior ou igual a <strong>15</strong>, exiba: <code><em>Conseguimos suprimentos suficientes para sobreviver este mês!</em></code>.<br>" +
+                     "• Caso contrário, exiba: <code><em>A situação é crítica. Vamos passar fome...</em></code>.",
+        starterCode: `total_comida = 0\n\n# Escreva seu laço for para os 5 dias de busca abaixo:\n`,
+        testCases: [
+          {
+            id: 1,
+            label: "Caso 1: Expedição Fartura (18 latas)",
+            setupVariables: { inputs: [3, 4, 5, 2, 4] },
+            expectedOutput: "Conseguimos suprimentos suficientes para sobreviver este mês!\n"
+          },
+          {
+            id: 2,
+            label: "Caso 2: Expedição Escassa (9 latas)",
+            setupVariables: { inputs: [2, 1, 3, 2, 1] },
+            expectedOutput: "A situação é crítica. Vamos passar fome...\n"
+          },
+          {
+            id: 3,
+            label: "Caso 3: Limite de Sobrevivência (15 latas)",
+            setupVariables: { inputs: [3, 3, 3, 3, 3] },
+            expectedOutput: "Conseguimos suprimentos suficientes para sobreviver este mês!\n"
+          }
+        ]
       }
     ],
     exam: [],
