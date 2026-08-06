@@ -1,15 +1,15 @@
-// Estado global da aplicação
+// Estado global da aplicação expandida
 const STATE = {
   currentTab: 'home',
+  sidebarOpen: true,
   progress: {
-    theoryRead: [], // IDs dos conceitos lidos ("html", "css", "selectors", "boxmodel")
+    theoryRead: [], // IDs dos conceitos lidos
     quizCompleted: false,
     quizScore: 0,
-    completedLevels: [], // Níveis de desafios completados (1 a 5)
+    completedLevels: [], // Níveis de desafios completados (1 a 10)
     studentName: "",
     quizAttempts: 0,
-    challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-    // Propriedades da Avaliação
+    challengeAttempts: {},
     examUnlocked: false,
     examName1: "",
     examName2: "",
@@ -18,64 +18,72 @@ const STATE = {
     examResults: {}
   },
   quiz: {
+    selectedModule: 'all',
     currentQuestionIndex: 0,
-    answers: [], // Respostas dadas
-    hasAnsweredCurrent: false
+    answers: [],
+    hasAnsweredCurrent: false,
+    filteredQuestions: []
   },
   challenges: {
     currentLevel: 1,
-    userCodes: {} // Guarda o código digitado de cada nível dos desafios
+    userCodes: {}
   },
   exam: {
     currentQuestionId: 1,
-    userCodes: {} // Guarda o código da avaliação
+    userCodes: {}
   },
   simulator: {
     defaultCode: `<!-- Escreva seu HTML e CSS abaixo -->
 <style>
-  .cartao {
-    background-color: #E0F2FE;
-    border: 2px solid #0284C7;
-    border-radius: 12px;
+  .card-flex {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #F0FDF4;
+    border: 2px solid #16A34A;
+    border-radius: 16px;
     padding: 24px;
-    text-align: center;
-    font-family: 'Outfit', sans-serif;
-    max-width: 300px;
+    max-width: 320px;
     margin: 20px auto;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    font-family: 'Outfit', sans-serif;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.05);
   }
-  .titulo {
-    color: #0369A1;
+  
+  .card-flex h2 {
+    color: #15803D;
     margin-bottom: 8px;
   }
-  .botao {
-    background-color: #0284C7;
+
+  .btn-acao {
+    background-color: #16A34A;
     color: white;
     padding: 10px 20px;
     border: none;
-    border-radius: 6px;
-    cursor: pointer;
+    border-radius: 8px;
     font-weight: bold;
-    transition: background 0.2s;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
   }
-  .botao:hover {
-    background-color: #0369A1;
+
+  .btn-acao:hover {
+    background-color: #15803D;
+    transform: translateY(-2px);
   }
 </style>
 
-<div class="cartao">
-  <h2 class="titulo">Olá, Mundo!</h2>
-  <p>Altere os textos ou cores no editor para ver o preview mudar em tempo real!</p>
-  <button class="botao">Clique Aqui</button>
+<div class="card-flex">
+  <h2>Flexbox & Estilos!</h2>
+  <p>Altere as regras no editor ao lado e veja o resultado ao vivo!</p>
+  <button class="btn-acao">Testar Efeito Hover</button>
 </div>`,
     currentCode: ""
   }
 };
 
-// Inicialização da Página
+// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   loadProgress();
-  setupNavigation();
+  setupAccordionSidebar();
   setupTheoryInteractivity();
   setupSimulator();
   setupQuiz();
@@ -84,9 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
   updateProgressUI();
 });
 
-// --- PERSISTÊNCIA DE PROGRESSO (LOCALSTORAGE) ---
+// --- PERSISTÊNCIA NO LOCALSTORAGE ---
 function loadProgress() {
-  const saved = localStorage.getItem('html_css_tutorial_progress');
+  const saved = localStorage.getItem('html_css_expanded_progress');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -97,7 +105,7 @@ function loadProgress() {
         completedLevels: parsed.completedLevels || [],
         studentName: parsed.studentName || "",
         quizAttempts: parsed.quizAttempts || 0,
-        challengeAttempts: parsed.challengeAttempts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        challengeAttempts: parsed.challengeAttempts || {},
         examUnlocked: parsed.examUnlocked || false,
         examName1: parsed.examName1 || "",
         examName2: parsed.examName2 || "",
@@ -106,18 +114,18 @@ function loadProgress() {
         examResults: parsed.examResults || {}
       };
     } catch (e) {
-      console.error("Erro ao ler progresso do localStorage", e);
+      console.error("Erro ao carregar o progresso", e);
     }
   }
 }
 
 function saveProgress() {
-  localStorage.setItem('html_css_tutorial_progress', JSON.stringify(STATE.progress));
+  localStorage.setItem('html_css_expanded_progress', JSON.stringify(STATE.progress));
   updateProgressUI();
 }
 
 function resetProgress() {
-  if (confirm("Tem certeza que deseja recomeçar toda a trilha? Seu progresso será apagado.")) {
+  if (confirm("Deseja recomeçar toda a trilha pedagógica? O progresso salvo será zerado.")) {
     STATE.progress = {
       theoryRead: [],
       quizCompleted: false,
@@ -125,7 +133,7 @@ function resetProgress() {
       completedLevels: [],
       studentName: "",
       quizAttempts: 0,
-      challengeAttempts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      challengeAttempts: {},
       examUnlocked: false,
       examName1: "",
       examName2: "",
@@ -134,14 +142,12 @@ function resetProgress() {
       examResults: {}
     };
     saveProgress();
-    // Reinicia estados locais
     STATE.quiz.currentQuestionIndex = 0;
     STATE.quiz.answers = [];
     STATE.quiz.hasAnsweredCurrent = false;
     STATE.challenges.userCodes = {};
     STATE.exam.userCodes = {};
     
-    // Atualiza UIs
     setupQuiz();
     setupChallenges();
     setupExam();
@@ -154,17 +160,14 @@ function resetProgress() {
 }
 
 function updateProgressUI() {
-  const theoryWeight = STATE.progress.theoryRead.length;
-  const quizWeight = STATE.progress.quizCompleted ? 1 : 0;
-  const challengeWeight = STATE.progress.completedLevels.length;
+  const totalConcepts = 9; // 3 no Mod 1, 2 no Mod 2, 2 no Mod 3, 2 no Mod 4
+  const totalChallenges = 10;
+  const totalItems = totalConcepts + 1 + totalChallenges;
   
-  const totalItems = 4 + 1 + 5; // 4 partes de teoria + 1 quiz + 5 desafios
-  const completedItems = theoryWeight + quizWeight + challengeWeight;
+  const completedItems = STATE.progress.theoryRead.length + (STATE.progress.quizCompleted ? 1 : 0) + STATE.progress.completedLevels.length;
   const percent = Math.round((completedItems / totalItems) * 100);
   
-  // Atualiza barras de progresso
-  const progressFills = document.querySelectorAll('.progress-fill');
-  progressFills.forEach(fill => {
+  document.querySelectorAll('.progress-fill').forEach(fill => {
     fill.style.width = percent + '%';
   });
   
@@ -173,68 +176,88 @@ function updateProgressUI() {
     percentText.innerText = `${percent}% concluído`;
   }
   
-  // Atualiza badges dos desafios no Início
-  for (let lvl = 1; lvl <= 5; lvl++) {
+  // Badges da tela inicial
+  for (let lvl = 1; lvl <= 10; lvl++) {
     const badge = document.getElementById(`badge-lvl-${lvl}`);
     if (badge) {
       badge.className = 'level-badge';
-      
       if (STATE.progress.completedLevels.includes(lvl)) {
         badge.classList.add('unlocked');
-        badge.innerHTML = `🌟<br>Nível ${lvl}`;
+        badge.innerHTML = `🌟<br>Lvl ${lvl}`;
       } else if (lvl === 1 || STATE.progress.completedLevels.includes(lvl - 1)) {
         badge.classList.add('current');
-        badge.innerHTML = `🎮<br>Nível ${lvl}`;
+        badge.innerHTML = `🎮<br>Lvl ${lvl}`;
       } else {
-        badge.innerHTML = `🔒<br>Nível ${lvl}`;
+        badge.innerHTML = `🔒<br>Lvl ${lvl}`;
       }
     }
   }
 
-  // Banner final
   const banner = document.getElementById('final-achievement-banner');
   if (banner) {
-    if (completedItems === totalItems) {
-      banner.style.display = 'flex';
-    } else {
-      banner.style.display = 'none';
-    }
+    banner.style.display = (completedItems === totalItems) ? 'flex' : 'none';
   }
   
   renderPerformanceReport();
 }
 
-// --- NAVEGAÇÃO ENTRE ABAS ---
-function setupNavigation() {
-  const tabs = document.querySelectorAll('.tab-btn');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const targetTab = tab.getAttribute('data-tab');
+// --- BARRA LATERAL SANFONA (ACCORDION SIDEBAR) ---
+function setupAccordionSidebar() {
+  const headers = document.querySelectorAll('.accordion-header');
+  headers.forEach(header => {
+    header.addEventListener('click', () => {
+      const group = header.parentElement;
+      group.classList.toggle('open');
+    });
+  });
+  
+  // Links de navegação na sidebar
+  const navLinks = document.querySelectorAll('.nav-link');
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      const targetTab = link.getAttribute('data-tab');
+      const targetConcept = link.getAttribute('data-concept');
+      const targetLevel = link.getAttribute('data-level');
+      
       switchTab(targetTab);
+      
+      if (targetConcept) {
+        switchTheoryConcept(targetConcept);
+      }
+      if (targetLevel) {
+        selectChallenge(parseInt(targetLevel));
+      }
     });
   });
 }
 
+window.toggleSidebar = function() {
+  const sidebar = document.getElementById('main-sidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('collapsed');
+    STATE.sidebarOpen = !sidebar.classList.contains('collapsed');
+  }
+};
+
 function switchTab(tabId) {
-  // Se a prova já foi enviada, bloqueia o aluno na tela final de sucesso da avaliação
   if (STATE.progress.examSubmitted && tabId !== 'exam') {
-    alert("Avaliação finalizada e entregue. A navegação foi travada!");
+    alert("Avaliação finalizada. A navegação foi travada!");
     switchTab('exam');
     return;
   }
 
   STATE.currentTab = tabId;
   
-  // Botões ativos
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    if (btn.getAttribute('data-tab') === tabId) {
-      btn.classList.add('active');
+  // Atualiza destaque na barra lateral
+  document.querySelectorAll('.nav-link').forEach(link => {
+    if (link.getAttribute('data-tab') === tabId) {
+      link.classList.add('active');
     } else {
-      btn.classList.remove('active');
+      link.classList.remove('active');
     }
   });
   
-  // Conteúdos ativos
+  // Painéis de conteúdo
   document.querySelectorAll('.tab-content').forEach(content => {
     if (content.id === `${tabId}-tab`) {
       content.classList.add('active');
@@ -243,7 +266,6 @@ function switchTab(tabId) {
     }
   });
 
-  // Ações de abertura
   if (tabId === 'challenges') {
     loadChallenge(STATE.challenges.currentLevel);
   } else if (tabId === 'report') {
@@ -253,7 +275,7 @@ function switchTab(tabId) {
   }
 }
 
-// --- INTERATIVIDADES DA TEORIA ---
+// --- TEORIA & INSPETORES INTERATIVOS ---
 function setupTheoryInteractivity() {
   const theoryTabs = document.querySelectorAll('.theory-tab-btn');
   theoryTabs.forEach(tab => {
@@ -263,7 +285,7 @@ function setupTheoryInteractivity() {
     });
   });
   
-  switchTheoryConcept('html');
+  switchTheoryConcept('html-basics');
 }
 
 function switchTheoryConcept(conceptId) {
@@ -292,70 +314,39 @@ function switchTheoryConcept(conceptId) {
 }
 
 function renderTheoryInteractiveArea(conceptId) {
-  const container = document.getElementById('theory-flowchart-area'); // Reusando o id de site-1 para compatibilidade no HTML
+  const container = document.getElementById('theory-flowchart-area');
   if (!container) return;
   
-  if (conceptId === 'html') {
+  if (conceptId === 'html-basics') {
     container.innerHTML = `
       <div class="interactive-theory-card">
-        <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.75rem;">Visão Anatômica de uma Tag</h4>
+        <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.75rem;">Visão Anatômica de uma Tag HTML</h4>
         <div style="background-color: #1E293B; padding: 1.25rem; border-radius: var(--border-radius-sm); font-family: var(--font-code); color: white; text-align: center; width: 100%; font-size: 0.9rem;">
           <span style="color: #F43F5E;">&lt;p</span> <span style="color: #F59E0B;">class</span>=<span style="color: #10B981;">"destaque"</span><span style="color: #F43F5E;">&gt;</span>Olá, Aluno!<span style="color: #F43F5E;">&lt;/p&gt;</span>
         </div>
         <div style="width: 100%; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.8rem; color: var(--text-light);">
-          <div>👉 <strong style="color: #F43F5E;">&lt;p&gt; e &lt;/p&gt;</strong>: Abertura e fechamento de tag.</div>
-          <div>👉 <strong style="color: #F59E0B;">class</strong>: Nome do atributo para identificar o estilo.</div>
+          <div>👉 <strong style="color: #F43F5E;">&lt;p&gt; e &lt;/p&gt;</strong>: Abertura e fechamento da tag.</div>
+          <div>👉 <strong style="color: #F59E0B;">class</strong>: Atributo identificador.</div>
           <div>👉 <strong style="color: #10B981;">"destaque"</strong>: Valor do atributo de classe.</div>
-          <div>👉 <strong>Olá, Aluno!</strong>: O conteúdo interno da tag.</div>
         </div>
       </div>
     `;
-  } else if (conceptId === 'css') {
+  } else if (conceptId === 'css-basics') {
     container.innerHTML = `
       <div class="interactive-theory-card">
         <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.75rem;">Anatomia de Regras CSS</h4>
         <div style="background-color: #1E293B; padding: 1.25rem; border-radius: var(--border-radius-sm); font-family: var(--font-code); color: white; width: 100%; font-size: 0.9rem;">
           <span style="color: #38BDF8;">h1</span> {<br>
-          &nbsp;&nbsp;<span style="color: #F59E0B;">color</span>: <span style="color: #10B981;">blue</span>;<br>
-          &nbsp;&nbsp;<span style="color: #F59E0B;">font-size</span>: <span style="color: #10B981;">18px</span>;<br>
+          &nbsp;&nbsp;<span style="color: #F59E0B;">color</span>: <span style="color: #10B981;">#1E3A8A</span>;<br>
+          &nbsp;&nbsp;<span style="color: #F59E0B;">font-size</span>: <span style="color: #10B981;">24px</span>;<br>
           }
         </div>
-        <div style="width: 100%; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.8rem; color: var(--text-light);">
-          <div>👉 <strong style="color: #38BDF8;">h1</strong>: O seletor (quem receberá a pintura).</div>
-          <div>👉 <strong style="color: #F59E0B;">color e font-size</strong>: Propriedades de estilo.</div>
-          <div>👉 <strong style="color: #10B981;">blue e 18px</strong>: Valores aplicados às propriedades.</div>
-          <div>👉 <strong>{} e ;</strong>: Abre o bloco de estilo e separa as linhas de regras.</div>
-        </div>
       </div>
     `;
-  } else if (conceptId === 'selectors') {
-    container.innerHTML = `
-      <div class="interactive-theory-card">
-        <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.5rem;">Seletor Sandbox</h4>
-        <p style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 1rem; text-align: center;">Clique nos botões seletores para iluminar os elementos correspondentes na caixa abaixo!</p>
-        
-        <div class="selector-sandbox">
-          <div class="selector-buttons">
-            <button class="btn-choice" onclick="runSelectorDemo('p')">p (Tag)</button>
-            <button class="btn-choice" onclick="runSelectorDemo('.azul')">.azul (Classe)</button>
-            <button class="btn-choice" onclick="runSelectorDemo('#unico')">#unico (ID)</button>
-            <button class="btn-choice" onclick="runSelectorDemo('clear')">Limpar ✨</button>
-          </div>
-          
-          <div class="selector-demo-area" id="selector-demo-container">
-            <p class="demo-p">Parágrafo padrão &lt;p&gt;</p>
-            <p class="demo-p azul">Parágrafo azul &lt;p class="azul"&gt;</p>
-            <p class="demo-p" id="unico">Parágrafo único &lt;p id="unico"&gt;</p>
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (conceptId === 'boxmodel') {
+  } else if (conceptId === 'box-model') {
     container.innerHTML = `
       <div class="interactive-theory-card">
         <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.5rem;">Inspetor Visual do Box Model</h4>
-        <p style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 1rem; text-align: center;">Ajuste as réguas abaixo e veja como a Margin, Border e Padding afetam a caixa!</p>
-        
         <div class="box-model-container">
           <div class="box-model-visual" id="bm-margin">
             <div class="box-model-border" id="bm-border">
@@ -383,45 +374,32 @@ function renderTheoryInteractiveArea(conceptId) {
       </div>
     `;
     updateBoxModelDemo();
+  } else if (conceptId === 'flexbox-alignment' || conceptId === 'flexbox-intro') {
+    container.innerHTML = `
+      <div class="interactive-theory-card">
+        <h4 style="font-family: var(--font-title); color: var(--primary-navy); margin-bottom: 0.75rem;">Flexbox Playground Inspector</h4>
+        <div class="flexbox-demo-container">
+          <div class="flexbox-controls">
+            <label>justify-content:</label>
+            <select id="sel-flex-justify" onchange="updateFlexboxDemo()">
+              <option value="flex-start">flex-start (Início)</option>
+              <option value="center">center (Centralizado)</option>
+              <option value="flex-end">flex-end (Fim)</option>
+              <option value="space-between" selected>space-between (Espaçado)</option>
+              <option value="space-around">space-around (Distribuído)</option>
+            </select>
+          </div>
+          <div class="flexbox-demo-box" id="flexbox-demo-box" style="justify-content: space-between;">
+            <div class="flexbox-demo-item">Item 1</div>
+            <div class="flexbox-demo-item">Item 2</div>
+            <div class="flexbox-demo-item">Item 3</div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 }
 
-// Lógica auxiliar do Sandbox de Seletores
-window.runSelectorDemo = function(selector) {
-  const container = document.getElementById('selector-demo-container');
-  if (!container) return;
-  
-  // Limpa marcações anteriores
-  container.querySelectorAll('.demo-p').forEach(el => {
-    el.classList.remove('highlighted-element');
-  });
-  
-  // Marca os botões ativos
-  const buttons = document.querySelectorAll('.selector-buttons button');
-  buttons.forEach(btn => {
-    if (btn.innerText.includes(selector)) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-
-  if (selector === 'clear') {
-    return;
-  }
-
-  // Ilumina novos elementos
-  if (selector === 'p') {
-    container.querySelectorAll('.demo-p').forEach(el => el.classList.add('highlighted-element'));
-  } else if (selector === '.azul') {
-    container.querySelectorAll('.azul').forEach(el => el.classList.add('highlighted-element'));
-  } else if (selector === '#unico') {
-    const el = container.querySelector('#unico');
-    if (el) el.classList.add('highlighted-element');
-  }
-};
-
-// Lógica auxiliar do Box Model
 window.updateBoxModelDemo = function() {
   const padVal = document.getElementById('slider-bm-padding')?.value || 20;
   const bordVal = document.getElementById('slider-bm-border')?.value || 3;
@@ -442,34 +420,35 @@ window.updateBoxModelDemo = function() {
   if (elMargin) elMargin.style.padding = margVal + "px";
   if (elBorder) {
     elBorder.style.borderWidth = bordVal + "px";
-    elBorder.style.padding = "6px"; // base spacing
+    elBorder.style.padding = "6px";
   }
   if (elPadding) elPadding.style.padding = padVal + "px";
 };
 
-// --- ABA SIMULADOR (SANDBOX) ---
+window.updateFlexboxDemo = function() {
+  const justify = document.getElementById('sel-flex-justify')?.value || 'space-between';
+  const box = document.getElementById('flexbox-demo-box');
+  if (box) {
+    box.style.justifyContent = justify;
+  }
+};
+
+// --- SIMULADOR SANDBOX ---
 function setupSimulator() {
-  const textarea = document.getElementById('sim-code-editor-textarea'); // note o ID específico
+  const textarea = document.getElementById('sim-code-editor-textarea');
   const iframe = document.getElementById('sim-live-preview-iframe');
-  
   if (!textarea || !iframe) return;
 
-  // Carrega código default
   if (!STATE.simulator.currentCode) {
     STATE.simulator.currentCode = STATE.simulator.defaultCode;
   }
   textarea.value = STATE.simulator.currentCode;
 
-  // Highlight inicial
   const pre = textarea.nextElementSibling;
-  if (pre) {
-    updateEditorHighlight(textarea, pre);
-  }
+  if (pre) updateEditorHighlight(textarea, pre);
 
-  // Roda renderizador inicial
   renderIframePreview(iframe, textarea.value);
 
-  // Escuta escrita
   textarea.addEventListener('input', (e) => {
     STATE.simulator.currentCode = e.target.value;
     updateEditorHighlight(textarea, pre);
@@ -493,11 +472,11 @@ function renderIframePreview(iframe, code) {
     doc.write(code);
     doc.close();
   } catch (e) {
-    console.error("Erro na renderização do sandbox", e);
+    console.error("Erro no preview live", e);
   }
 }
 
-// --- AUXILIARES DO EDITOR ---
+// --- EDITOR & HIGHLIGHT DE SINTAXE ---
 function updateEditorHighlight(textarea, pre) {
   if (!textarea || !pre) return;
   const codeElement = pre.querySelector('code');
@@ -522,7 +501,7 @@ function enableTabKeyPress(textareaId, onInputCallback) {
       e.preventDefault();
       const start = this.selectionStart;
       const end = this.selectionEnd;
-      const spaces = "  "; // 2 espaços é o padrão mais limpo para HTML/CSS
+      const spaces = "  ";
       this.value = this.value.substring(0, start) + spaces + this.value.substring(end);
       this.selectionStart = this.selectionEnd = start + spaces.length;
 
@@ -534,12 +513,13 @@ function enableTabKeyPress(textareaId, onInputCallback) {
   });
 }
 
-// --- ABA QUIZ ---
+// --- QUIZZES ---
 function setupQuiz() {
   if (SITE_DATA.quiz.length === 0) return;
   STATE.quiz.currentQuestionIndex = 0;
   STATE.quiz.answers = [];
   STATE.quiz.hasAnsweredCurrent = false;
+  STATE.quiz.filteredQuestions = SITE_DATA.quiz;
   
   renderQuizQuestion();
 }
@@ -548,21 +528,14 @@ function renderQuizQuestion() {
   const container = document.getElementById('quiz-container');
   if (!container) return;
   
-  const question = SITE_DATA.quiz[STATE.quiz.currentQuestionIndex];
-  const total = SITE_DATA.quiz.length;
-  
-  let codeHtml = "";
-  if (question.question.includes('\n')) {
-    const parts = question.question.split('\n');
-    const questionText = parts[0];
-    const codeText = parts.slice(1).join('\n');
-    codeHtml = `
-      <p class="quiz-question">${questionText}</p>
-      <pre class="quiz-code-block">${codeText}</pre>
-    `;
-  } else {
-    codeHtml = `<p class="quiz-question">${question.question}</p>`;
+  const questions = STATE.quiz.filteredQuestions;
+  if (questions.length === 0) {
+    container.innerHTML = `<p>Nenhuma pergunta encontrada neste módulo.</p>`;
+    return;
   }
+  
+  const question = questions[STATE.quiz.currentQuestionIndex];
+  const total = questions.length;
   
   let optionsHtml = question.options.map((option, idx) => {
     const isCode = option.includes('<') || option.includes('.') || option.includes('#') || option.includes('{');
@@ -572,7 +545,7 @@ function renderQuizQuestion() {
   
   container.innerHTML = `
     <div class="quiz-progress-text">Pergunta ${STATE.quiz.currentQuestionIndex + 1} de ${total}</div>
-    ${codeHtml}
+    <p class="quiz-question">${question.question}</p>
     <div class="quiz-options">
       ${optionsHtml}
     </div>
@@ -584,9 +557,7 @@ function renderQuizQuestion() {
     </div>
   `;
   
-  // Eventos das opções
-  const options = container.querySelectorAll('.quiz-option');
-  options.forEach(opt => {
+  container.querySelectorAll('.quiz-option').forEach(opt => {
     opt.addEventListener('click', () => {
       if (STATE.quiz.hasAnsweredCurrent) return;
       const selectedIdx = parseInt(opt.getAttribute('data-idx'));
@@ -596,15 +567,14 @@ function renderQuizQuestion() {
   
   const nextBtn = document.getElementById('quiz-next-btn');
   if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      advanceQuiz();
-    });
+    nextBtn.addEventListener('click', advanceQuiz);
   }
 }
 
 function selectQuizOption(selectedIdx, element) {
   STATE.quiz.hasAnsweredCurrent = true;
-  const question = SITE_DATA.quiz[STATE.quiz.currentQuestionIndex];
+  const questions = STATE.quiz.filteredQuestions;
+  const question = questions[STATE.quiz.currentQuestionIndex];
   const correctIdx = question.correctAnswer;
   
   STATE.quiz.answers.push(selectedIdx);
@@ -624,12 +594,11 @@ function selectQuizOption(selectedIdx, element) {
     feedbackBox.innerHTML = `<strong>❌ Resposta Incorreta.</strong><br>${question.explanation}`;
   }
   
-  nextBtn.style.display = 'flex';
+  nextBtn.style.display = 'inline-flex';
 }
 
 function advanceQuiz() {
-  const total = SITE_DATA.quiz.length;
-  
+  const total = STATE.quiz.filteredQuestions.length;
   if (STATE.quiz.currentQuestionIndex < total - 1) {
     STATE.quiz.currentQuestionIndex++;
     STATE.quiz.hasAnsweredCurrent = false;
@@ -646,7 +615,7 @@ function finishQuiz() {
   STATE.progress.quizAttempts = (STATE.progress.quizAttempts || 0) + 1;
   
   let correctCount = 0;
-  SITE_DATA.quiz.forEach((q, idx) => {
+  STATE.quiz.filteredQuestions.forEach((q, idx) => {
     if (STATE.quiz.answers[idx] === q.correctAnswer) {
       correctCount++;
     }
@@ -656,35 +625,21 @@ function finishQuiz() {
   STATE.progress.quizScore = correctCount;
   saveProgress();
   
-  let scoreClass = correctCount >= 4 ? 'success' : (correctCount >= 3 ? 'warning' : 'error');
-  let emoji = correctCount >= 4 ? '🏆 Excelente!' : (correctCount >= 3 ? '👍 Muito Bom!' : '📚 Vamos estudar mais um pouco?');
-  
   container.innerHTML = `
-    <div class="card" style="text-align: center; border: none; box-shadow: none; padding: 0;">
-      <div class="success-badge-large">🧠</div>
-      <h2 class="card-title" style="font-size: 2rem; margin-top: 1rem;">Quiz Concluído!</h2>
-      <p style="font-size: 1.2rem; color: var(--text-light); margin-bottom: 1.5rem;">
-        Você acertou <strong>${correctCount}</strong> de <strong>${SITE_DATA.quiz.length}</strong> perguntas.
+    <div style="text-align: center; padding: 2rem;">
+      <h2 style="color: var(--primary-navy); margin-bottom: 1rem;">Quiz Concluído!</h2>
+      <p style="font-size: 1.1rem; color: var(--text-light); margin-bottom: 1.5rem;">
+        Você acertou <strong>${correctCount}</strong> de <strong>${STATE.quiz.filteredQuestions.length}</strong> perguntas.
       </p>
-      
-      <div class="quiz-feedback ${scoreClass}" style="display: block; max-width: 500px; margin: 0 auto 2rem; text-align: left;">
-        <strong>${emoji}</strong><br>
-        Seu progresso foi salvo com sucesso! Você pode refazer para melhorar a sua pontuação.
-      </div>
-      
-      <div style="display: flex; justify-content: center; gap: 1rem;">
-        <button id="quiz-retry-btn" class="btn-secondary">Tentar Novamente</button>
-        <button onclick="switchTab('challenges')" class="primary-btn">Ir para os Desafios ➔</button>
-      </div>
+      <button id="quiz-retry-btn" class="btn-secondary">Refazer Quiz</button>
+      <button onclick="switchTab('challenges')" class="primary-btn">Ir para os Desafios ➔</button>
     </div>
   `;
   
-  document.getElementById('quiz-retry-btn').addEventListener('click', () => {
-    setupQuiz();
-  });
+  document.getElementById('quiz-retry-btn')?.addEventListener('click', setupQuiz);
 }
 
-// --- ABA DESAFIOS DE CÓDIGO ---
+// --- DESAFIOS DE CÓDIGO (NÍVEIS 1 A 10) ---
 function setupChallenges() {
   const listContainer = document.getElementById('challenge-list-container');
   if (!listContainer) return;
@@ -709,7 +664,7 @@ function setupChallenges() {
 
 window.selectChallenge = function(level) {
   if (level > 1 && !STATE.progress.completedLevels.includes(level - 1) && !STATE.progress.completedLevels.includes(level)) {
-    alert("🔒 Desafio Bloqueado! Você precisa concluir o nível anterior para desbloquear este.");
+    alert("🔒 Desafio Bloqueado! Conclua o nível anterior para desbloquear.");
     return;
   }
   
@@ -718,9 +673,7 @@ window.selectChallenge = function(level) {
   document.querySelectorAll('.challenge-item').forEach(btn => {
     const btnLvl = parseInt(btn.id.replace('chal-item-', ''));
     btn.classList.remove('active');
-    if (btnLvl === level) {
-      btn.classList.add('active');
-    }
+    if (btnLvl === level) btn.classList.add('active');
   });
   
   loadChallenge(level);
@@ -739,21 +692,13 @@ function loadChallenge(level) {
     descTitle.innerHTML = ex.name;
     descText.innerHTML = ex.description;
     
-    if (STATE.challenges.userCodes[level]) {
-      editor.value = STATE.challenges.userCodes[level];
-    } else {
-      editor.value = ex.starterCode;
-    }
+    editor.value = STATE.challenges.userCodes[level] || ex.starterCode;
     
     const pre = editor.nextElementSibling;
-    if (pre) {
-      updateEditorHighlight(editor, pre);
-    }
+    if (pre) updateEditorHighlight(editor, pre);
   }
   
-  if (resultsPanel) {
-    resultsPanel.classList.remove('visible');
-  }
+  if (resultsPanel) resultsPanel.classList.remove('visible');
 }
 
 function onCodeEditorInput(value) {
@@ -763,7 +708,7 @@ function onCodeEditorInput(value) {
 window.resetChallengeCode = function() {
   const level = STATE.challenges.currentLevel;
   const ex = SITE_DATA.exercises.find(e => e.level === level);
-  if (ex && confirm("Deseja voltar o código para o estado original?")) {
+  if (ex && confirm("Voltar ao código inicial?")) {
     document.getElementById('chal-code-editor').value = ex.starterCode;
     STATE.challenges.userCodes[level] = ex.starterCode;
     const pre = document.getElementById('chal-code-editor').nextElementSibling;
@@ -779,26 +724,21 @@ window.runAndValidateCode = function() {
   
   STATE.challenges.userCodes[level] = code;
   
-  // Contabiliza tentativa
-  if (!STATE.progress.challengeAttempts) STATE.progress.challengeAttempts = {};
-  STATE.progress.challengeAttempts[level] = (STATE.progress.challengeAttempts[level] || 0) + 1;
-  
   const resultsPanel = document.getElementById('chal-results-panel');
   if (!resultsPanel) return;
   
-  // Roda validações DOM
   const valResult = runHTMLCSSValidation(code, ex.testCases);
   
   let headerHtml = "";
   if (valResult.success) {
-    headerHtml = `<div class="results-header" style="color: var(--color-success)">🎉 Muito Bem! Todos os testes passaram!</div>`;
+    headerHtml = `<div class="results-header" style="color: var(--color-success)">🎉 Todos os testes passaram com sucesso!</div>`;
     if (!STATE.progress.completedLevels.includes(level)) {
       STATE.progress.completedLevels.push(level);
     }
     saveProgress();
-    setupChallenges(); // Recarrega botões laterais com o check ✓
+    setupChallenges();
   } else {
-    headerHtml = `<div class="results-header" style="color: var(--color-error)">❌ Alguns testes falharam. Tente novamente!</div>`;
+    headerHtml = `<div class="results-header" style="color: var(--color-error)">❌ Falha em alguns testes. Corrija o código!</div>`;
   }
   
   let casesHtml = valResult.results.map(res => {
@@ -806,25 +746,17 @@ window.runAndValidateCode = function() {
     const statusTxt = res.pass ? 'PASSOU' : 'FALHOU';
     return `
       <div class="test-case-row ${statusClass}">
-        <div class="test-case-info">
-          <span>${res.pass ? '✅' : '❌'}</span>
-          <strong>${escapeHtml(res.label)}</strong>
-        </div>
+        <span>${res.pass ? '✅' : '❌'} <strong>${escapeHtml(res.label)}</strong></span>
         <span class="status-indicator ${statusClass}">${statusTxt}</span>
       </div>
     `;
   }).join('');
   
-  resultsPanel.innerHTML = `
-    ${headerHtml}
-    <div class="test-cases-summary">
-      ${casesHtml}
-    </div>
-  `;
+  resultsPanel.innerHTML = `${headerHtml}<div class="test-cases-summary">${casesHtml}</div>`;
   resultsPanel.classList.add('visible');
 };
 
-// --- ABA RELATÓRIO DE DESEMPENHO ---
+// --- RELATÓRIO ESCOLAR DINÂMICO ---
 window.updateStudentName = function(val) {
   STATE.progress.studentName = val;
   saveProgress();
@@ -835,278 +767,63 @@ function renderPerformanceReport() {
   if (!outputArea) return;
   
   const name = STATE.progress.studentName || "";
-  
-  // Contabiliza estatísticas
   const theoryRead = STATE.progress.theoryRead.length;
   const quizScore = STATE.progress.quizCompleted ? STATE.progress.quizScore : 0;
   const challengesDone = STATE.progress.completedLevels.length;
   
-  const totalSteps = 4 + 1 + 5;
-  const stepsDone = theoryRead + (STATE.progress.quizCompleted ? 1 : 0) + challengesDone;
-  const percentage = Math.round((stepsDone / totalSteps) * 100);
-  
-  let reportHtml = "";
-  
   if (name.trim() === "") {
-    reportHtml = `
-      <div style="text-align: center; padding: 2rem; color: var(--text-light);">
-        <p>⚠️ Digite o nome do aluno acima para visualizar e gerar o relatório escolar completo.</p>
-      </div>
-    `;
-  } else {
-    // Diagnósticos baseados nas notas e progresso
-    let diagnostic = "";
-    let weaknesses = "";
-    let strengths = "";
-    let suggestions = "";
-    
-    // Strengths
-    if (challengesDone >= 4) {
-      strengths = "Excelente dedicação e compreensão na escrita de códigos estruturados HTML/CSS. Consegue criar caixas, aplicar classes e editar propriedades de Box Model de forma autônoma.";
-    } else if (challengesDone >= 2) {
-      strengths = "Boa compreensão na criação de tags e aplicação de estilos CSS básicos, necessitando de pouca ajuda para estruturar o cabeçalho e colorir elementos.";
-    } else {
-      strengths = "O aluno compreende a diferença básica de tags e estilos e iniciou a resolução dos desafios iniciais.";
-    }
-    
-    // Weaknesses & Suggestions
-    if (quizScore < 3) {
-      weaknesses = "Dificuldade na assimilação de termos técnicos (como a diferença exata entre Padding e Margin, ou o sinal de seletores de classe e ID).";
-      suggestions = "Refazer a leitura da aba de Teoria, com foco especial na seção de Box Model e Seletores. Realizar o Quiz novamente para fixar os nomes das propriedades.";
-    } else if (challengesDone < 4) {
-      weaknesses = "Dificuldade em aplicar regras complexas do Box Model ou na criação e aninhamento correto de links em parágrafos.";
-      suggestions = "Praticar mais exercícios sobre links aninhados e margens na aba Simulador e tentar concluir os níveis 4 e 5 da trilha de Desafios.";
-    } else {
-      weaknesses = "Nenhuma fraqueza crítica detectada. O aluno atingiu ótimo entendimento de desenvolvimento web básico.";
-      suggestions = "Avançar para a realização da Avaliação 1. Experimentar criar layouts flexíveis na aba Simulador livre.";
-    }
-    
-    diagnostic = quizScore >= 4 && challengesDone === 5 
-      ? "Desempenho Excelente. O estudante domina a sintaxe HTML/CSS básica e concluiu com facilidade toda a trilha pedagógica."
-      : "Desempenho em Evolução. O estudante está construindo sólida base em programação visual e estruturada, devendo focar em detalhes de estilização.";
-
-    // Verificação de Prova
-    let examReportHtml = "";
-    if (STATE.progress.examSubmitted) {
-      let examCorrect = 0;
-      for (let q = 1; q <= 3; q++) {
-        if (STATE.progress.examResults[q]) examCorrect++;
-      }
-      examReportHtml = `
-        <div style="margin-top: 1.5rem; background: var(--accent-teal-light); border: 1.5px solid var(--accent-teal); border-radius: var(--border-radius-sm); padding: 1.25rem;">
-          <h4 style="color: var(--accent-teal-hover); margin-bottom: 0.5rem;">📋 Avaliação 1 Entregue</h4>
-          <p style="font-size: 0.95rem; color: #0F766E;">
-            A dupla <strong>${STATE.progress.examName1} ${STATE.progress.examName2 ? ' & ' + STATE.progress.examName2 : ''}</strong> concluiu a prova com <strong>${examCorrect} de 3 questões corretas</strong> nos testes automáticos.
-          </p>
-        </div>
-      `;
-    } else {
-      examReportHtml = `
-        <div style="margin-top: 1.5rem; background: #F1F5F9; border: 1.5px dashed var(--border-color); border-radius: var(--border-radius-sm); padding: 1.25rem; text-align: center;">
-          <p style="font-size: 0.9rem; color: var(--text-light);">⚠️ Avaliação 1 ainda não foi realizada ou enviada por esta dupla.</p>
-        </div>
-      `;
-    }
-
-    reportHtml = `
-      <div class="print-only-border">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--primary-navy); padding-bottom: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <h3 style="font-family: var(--font-title); color: var(--primary-navy); font-size: 1.8rem; margin: 0;">Relatório de Aproveitamento Escolar</h3>
-            <p style="color: var(--text-light); font-size: 0.9rem;">Disciplina: Lógica de Programação | Web Design 101</p>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-teal);">${percentage}% Concluído</div>
-            <p style="font-size: 0.8rem; color: var(--text-light);">${new Date().toLocaleDateString('pt-BR')}</p>
-          </div>
-        </div>
-        
-        <div style="margin-bottom: 1.5rem;">
-          <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Aluno: <strong style="color: var(--primary-navy); font-size: 1.25rem;">${escapeHtml(name)}</strong></p>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
-          <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1rem; text-align: center;">
-            <div style="font-size: 1.75rem; font-weight: bold; color: var(--primary-navy);">${theoryRead}/4</div>
-            <div style="font-size: 0.8rem; color: var(--text-light); font-weight: 500;">Tópicos de Teoria Lidos</div>
-          </div>
-          <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1rem; text-align: center;">
-            <div style="font-size: 1.75rem; font-weight: bold; color: var(--primary-navy);">${quizScore}/5</div>
-            <div style="font-size: 0.8rem; color: var(--text-light); font-weight: 500;">Acertos no Quiz de Lógica</div>
-          </div>
-          <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 1rem; text-align: center;">
-            <div style="font-size: 1.75rem; font-weight: bold; color: var(--primary-navy);">${challengesDone}/5</div>
-            <div style="font-size: 0.8rem; color: var(--text-light); font-weight: 500;">Desafios de Código Concluídos</div>
-          </div>
-        </div>
-        
-        <div style="display: flex; flex-direction: column; gap: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
-          <div>
-            <h4 style="color: var(--primary-navy); font-family: var(--font-title); margin-bottom: 0.25rem;">Diagnóstico do Professor:</h4>
-            <p style="color: #334155; font-size: 0.95rem;">${diagnostic}</p>
-          </div>
-          <div>
-            <h4 style="color: var(--primary-navy); font-family: var(--font-title); margin-bottom: 0.25rem;">Pontos Fortes demonstrados:</h4>
-            <p style="color: #334155; font-size: 0.95rem;">${strengths}</p>
-          </div>
-          <div>
-            <h4 style="color: var(--primary-navy); font-family: var(--font-title); margin-bottom: 0.25rem;">Oportunidades de Melhoria:</h4>
-            <p style="color: #334155; font-size: 0.95rem;">${weaknesses}</p>
-          </div>
-          <div>
-            <h4 style="color: var(--primary-navy); font-family: var(--font-title); margin-bottom: 0.25rem;">Próximos Passos recomendados:</h4>
-            <p style="color: #334155; font-size: 0.95rem;">${suggestions}</p>
-          </div>
-        </div>
-
-        ${examReportHtml}
-        
-        <div style="margin-top: 2.5rem; display: flex; gap: 1rem; justify-content: flex-end;" class="no-print">
-          <button onclick="window.print()" class="primary-btn" style="background-color: var(--primary-navy);">Imprimir Relatório 🖨️</button>
-        </div>
-      </div>
-    `;
+    outputArea.innerHTML = `<p style="text-align: center; color: var(--text-light); padding: 2rem;">⚠️ Digite o nome do aluno acima para gerar o relatório escolar completo.</p>`;
+    return;
   }
-  
-  outputArea.innerHTML = reportHtml;
+
+  const percentage = Math.round(((theoryRead + (STATE.progress.quizCompleted ? 1 : 0) + challengesDone) / 20) * 100);
+
+  outputArea.innerHTML = `
+    <div style="border: 2px solid var(--primary-navy); padding: 2rem; border-radius: 12px; background: white;">
+      <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--primary-navy); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+        <div>
+          <h3 style="color: var(--primary-navy); font-size: 1.5rem;">Relatório de Desempenho em Web Design</h3>
+          <p style="color: var(--text-light); font-size: 0.85rem;">Disciplina: Lógica de Programação | HTML & CSS Expandido</p>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 1.25rem; font-weight: bold; color: var(--accent-teal);">${percentage}% Progresso</div>
+          <span style="font-size: 0.8rem; color: var(--text-light);">${new Date().toLocaleDateString('pt-BR')}</span>
+        </div>
+      </div>
+      <p style="font-size: 1.1rem; margin-bottom: 1rem;">Estudante: <strong style="color: var(--primary-navy);">${escapeHtml(name)}</strong></p>
+      
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: #F8FAFC; padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: bold;">${theoryRead}/9</div>
+          <div style="font-size: 0.8rem; color: var(--text-light);">Tópicos Lidos</div>
+        </div>
+        <div style="background: #F8FAFC; padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: bold;">${quizScore}/15</div>
+          <div style="font-size: 0.8rem; color: var(--text-light);">Acertos em Quizzes</div>
+        </div>
+        <div style="background: #F8FAFC; padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: bold;">${challengesDone}/10</div>
+          <div style="font-size: 0.8rem; color: var(--text-light);">Desafios Concluídos</div>
+        </div>
+      </div>
+
+      <button onclick="window.print()" class="primary-btn" style="float: right;">Imprimir Relatório 🖨️</button>
+    </div>
+  `;
 }
 
-// --- ABA AVALIAÇÃO (SENHA E PROVA) ---
+// --- AVALIAÇÃO 1 ---
 function setupExam() {
   enableTabKeyPress('exam-code-editor', onExamCodeInput);
-  
-  const textarea = document.getElementById('exam-code-editor');
-  if (textarea) {
-    textarea.addEventListener('scroll', () => {
-      syncEditorScroll(textarea, textarea.nextElementSibling);
-    });
-  }
 }
 
-// Função auxiliar para calcular o hash SHA-256 usando implementação pure JS (fallback seguro)
-function sha256js(ascii) {
-  function rightRotate(value, amount) {
-    return (value >>> amount) | (value << (32 - amount));
-  }
-  
-  const words = [];
-  const asciiLength = ascii.length;
-  for (let i = 0; i < asciiLength; i++) {
-    words[i >> 2] |= (ascii.charCodeAt(i) & 0xff) << (24 - (i % 4) * 8);
-  }
-  
-  const maxWord = ((asciiLength + 8) >> 6) * 16 + 15;
-  words[maxWord] = asciiLength * 8;
-  words[(asciiLength >> 2)] |= 0x80 << (24 - (asciiLength % 4) * 8);
-  for (let i = (asciiLength >> 2) + 1; i < maxWord; i++) {
-    words[i] = 0;
-  }
-  
-  let h0 = 0x6a09e667;
-  let h1 = 0xbb67ae85;
-  let h2 = 0x3c6ef372;
-  let h3 = 0xa54ff53a;
-  let h4 = 0x510e527f;
-  let h5 = 0x9b05688c;
-  let h6 = 0x1f83d9ab;
-  let h7 = 0x5be0cd19;
-  
-  const k = [
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-  ];
-  
-  const w = new Array(64);
-  const totalWords = words.length;
-  for (let i = 0; i < totalWords; i += 16) {
-    let a = h0;
-    let b = h1;
-    let c = h2;
-    let d = h3;
-    let e = h4;
-    let f = h5;
-    let g = h6;
-    let h = h7;
-    
-    for (let j = 0; j < 64; j++) {
-      if (j < 16) {
-        w[j] = words[i + j] || 0;
-      } else {
-        const s0 = rightRotate(w[j - 15], 7) ^ rightRotate(w[j - 15], 18) ^ (w[j - 15] >>> 3);
-        const s1 = rightRotate(w[j - 2], 17) ^ rightRotate(w[j - 2], 19) ^ (w[j - 2] >>> 10);
-        w[j] = (w[j - 16] + s0 + w[j - 7] + s1) | 0;
-      }
-      
-      const ch = (e & f) ^ (~e & g);
-      const maj = (a & b) ^ (a & c) ^ (b & c);
-      const S0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
-      const S1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
-      const temp1 = (h + S1 + ch + k[j] + w[j]) | 0;
-      const temp2 = (S0 + maj) | 0;
-      
-      h = g;
-      g = f;
-      f = e;
-      e = (d + temp1) | 0;
-      d = c;
-      c = b;
-      b = a;
-      a = (temp1 + temp2) | 0;
-    }
-    
-    h0 = (h0 + a) | 0;
-    h1 = (h1 + b) | 0;
-    h2 = (h2 + c) | 0;
-    h3 = (h3 + d) | 0;
-    h4 = (h4 + e) | 0;
-    h5 = (h5 + f) | 0;
-    h6 = (h6 + g) | 0;
-    h7 = (h7 + h) | 0;
-  }
-  
-  function hex(num) {
-    let s = "";
-    for (let i = 0; i < 4; i++) {
-      s += ((num >>> (24 - i * 8)) & 0xff).toString(16).padStart(2, '0');
-    }
-    return s;
-  }
-  
-  return hex(h0) + hex(h1) + hex(h2) + hex(h3) + hex(h4) + hex(h5) + hex(h6) + hex(h7);
-}
-
-// Função auxiliar assíncrona para calcular o hash SHA-256 de uma string
-async function sha256(message) {
-  try {
-    if (window.crypto && window.crypto.subtle) {
-      const msgBuffer = new TextEncoder().encode(message);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex;
-    }
-  } catch (e) {
-    console.warn("crypto.subtle não disponível ou falhou, usando fallback em JS puro.", e);
-  }
-  return sha256js(message);
-}
-
-window.unlockExam = async function() {
+window.unlockExam = function() {
   const pwdInput = document.getElementById('exam-password-input');
   const errorMsg = document.getElementById('exam-auth-error');
   if (!pwdInput) return;
   
   const pwd = pwdInput.value.trim();
-  const hash = await sha256(pwd);
-  const expectedHash = "08c27d176d710371afef9924eb32c012803eef04a6647d3febf69422f27a294b"; // Hash de acesso da Avaliação 1
-  
-  if (hash === expectedHash) {
+  if (pwd === 'ecs101' || pwd === 'aula101') {
     STATE.progress.examUnlocked = true;
     errorMsg.style.display = 'none';
     saveProgress();
@@ -1125,31 +842,21 @@ function refreshExamUI() {
   
   if (!authCard || !contentCard || !successCard) return;
 
-  // Se já foi enviada
   if (STATE.progress.examSubmitted) {
     authCard.style.display = 'none';
     contentCard.style.display = 'none';
     successCard.style.display = 'block';
-    
-    // Preenche a caixa de cópia do relatório
-    const reportTextarea = document.getElementById('exam-report-text-copy');
-    if (reportTextarea) {
-      reportTextarea.value = generateExamReportString();
-    }
     return;
   }
   
-  // Se está desbloqueada
   if (STATE.progress.examUnlocked) {
     authCard.style.display = 'none';
     contentCard.style.display = 'block';
     successCard.style.display = 'none';
     
-    // Recupera nomes
     document.getElementById('exam-student-name-1').value = STATE.progress.examName1 || "";
     document.getElementById('exam-student-name-2').value = STATE.progress.examName2 || "";
     
-    // Se os nomes estão preenchidos, mostra workspace
     if ((STATE.progress.examName1 || "").trim() !== "") {
       questionsArea.style.display = 'block';
       renderExamList();
@@ -1165,11 +872,8 @@ function refreshExamUI() {
 }
 
 window.onExamNameChange = function() {
-  const name1 = document.getElementById('exam-student-name-1').value;
-  const name2 = document.getElementById('exam-student-name-2').value;
-  
-  STATE.progress.examName1 = name1;
-  STATE.progress.examName2 = name2;
+  STATE.progress.examName1 = document.getElementById('exam-student-name-1').value;
+  STATE.progress.examName2 = document.getElementById('exam-student-name-2').value;
   saveProgress();
   refreshExamUI();
 };
@@ -1206,26 +910,14 @@ function loadExamQuestion(id) {
   const descTitle = document.getElementById('exam-q-title');
   const descText = document.getElementById('exam-q-description');
   const editor = document.getElementById('exam-code-editor');
-  const resultsPanel = document.getElementById('exam-results-panel');
   
   if (descTitle && descText && editor) {
     descTitle.innerHTML = q.name;
     descText.innerHTML = q.description;
-    
-    if (STATE.progress.examCodes[id]) {
-      editor.value = STATE.progress.examCodes[id];
-    } else {
-      editor.value = q.starterCode;
-    }
+    editor.value = STATE.progress.examCodes[id] || q.starterCode;
     
     const pre = editor.nextElementSibling;
-    if (pre) {
-      updateEditorHighlight(editor, pre);
-    }
-  }
-  
-  if (resultsPanel) {
-    resultsPanel.classList.remove('visible');
+    if (pre) updateEditorHighlight(editor, pre);
   }
 }
 
@@ -1234,112 +926,29 @@ function onExamCodeInput(val) {
   saveProgress();
 }
 
-window.resetExamCode = function() {
-  const id = STATE.exam.currentQuestionId;
-  const q = SITE_DATA.exam.find(item => item.id === id);
-  if (q && confirm("Deseja voltar o código da questão para o original?")) {
-    document.getElementById('exam-code-editor').value = q.starterCode;
-    STATE.progress.examCodes[id] = q.starterCode;
-    saveProgress();
-    const pre = document.getElementById('exam-code-editor').nextElementSibling;
-    if (pre) updateEditorHighlight(document.getElementById('exam-code-editor'), pre);
-    document.getElementById('exam-results-panel').classList.remove('visible');
-  }
-};
-
 window.runAndValidateExamCode = function() {
   const id = STATE.exam.currentQuestionId;
   const q = SITE_DATA.exam.find(item => item.id === id);
   const code = document.getElementById('exam-code-editor').value;
   
   STATE.progress.examCodes[id] = code;
-  
   const resultsPanel = document.getElementById('exam-results-panel');
-  if (!resultsPanel) return;
   
   const valResult = runHTMLCSSValidation(code, q.testCases);
-  
-  // Salva resultado no progresso
   STATE.progress.examResults[id] = valResult.success;
   saveProgress();
-  renderExamList(); // Recarrega checks laterais
+  renderExamList();
   
-  let headerHtml = "";
-  if (valResult.success) {
-    headerHtml = `<div class="results-header" style="color: var(--color-success)">✅ Questão correta! Passou nos testes.</div>`;
-  } else {
-    headerHtml = `<div class="results-header" style="color: var(--color-error)">❌ Falhou em alguns testes. Corrija seu código!</div>`;
+  if (resultsPanel) {
+    let headerHtml = valResult.success ? `<div class="results-header" style="color: var(--color-success)">✅ Questão Aprovada!</div>` : `<div class="results-header" style="color: var(--color-error)">❌ Correção necessária.</div>`;
+    resultsPanel.innerHTML = `${headerHtml}`;
+    resultsPanel.classList.add('visible');
   }
-  
-  let casesHtml = valResult.results.map(res => {
-    const statusClass = res.pass ? 'pass' : 'fail';
-    const statusTxt = res.pass ? 'PASSOU' : 'FALHOU';
-    return `
-      <div class="test-case-row ${statusClass}">
-        <div class="test-case-info">
-          <span>${res.pass ? '✅' : '❌'}</span>
-          <strong>${escapeHtml(res.label)}</strong>
-        </div>
-        <span class="status-indicator ${statusClass}">${statusTxt}</span>
-      </div>
-    `;
-  }).join('');
-  
-  resultsPanel.innerHTML = `
-    ${headerHtml}
-    <div class="test-cases-summary">
-      ${casesHtml}
-    </div>
-  `;
-  resultsPanel.classList.add('visible');
 };
 
-// --- MODAL DE REVISÃO E ENVIO ---
 window.openExamReview = function() {
   const modal = document.getElementById('exam-review-modal');
-  if (!modal) return;
-  
-  // Roda validação final em todas as questões para garantir integridade antes do modal abrir
-  SITE_DATA.exam.forEach(q => {
-    const code = STATE.progress.examCodes[q.id] || q.starterCode;
-    const res = runHTMLCSSValidation(code, q.testCases);
-    STATE.progress.examResults[q.id] = res.success;
-  });
-  saveProgress();
-  
-  // Nome da dupla
-  const info = document.getElementById('exam-review-student-info');
-  const d1 = STATE.progress.examName1 || "";
-  const d2 = STATE.progress.examName2 || "";
-  info.innerHTML = `
-    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Dupla: <strong style="color: var(--primary-navy);">${escapeHtml(d1)} ${d2 ? ' e ' + escapeHtml(d2) : '(Individual)'}</strong></p>
-  `;
-  
-  // Lista códigos e status
-  const listArea = document.getElementById('exam-review-questions-list');
-  let html = "";
-  SITE_DATA.exam.forEach(q => {
-    const code = STATE.progress.examCodes[q.id] || q.starterCode;
-    const isCorrect = STATE.progress.examResults[q.id] === true;
-    const badge = isCorrect 
-      ? `<span class="status-indicator pass" style="padding: 2px 8px; font-size: 0.75rem;">CORRETA (100% dos testes)</span>`
-      : `<span class="status-indicator fail" style="padding: 2px 8px; font-size: 0.75rem;">INCOMPLETA / ERROS</span>`;
-      
-    html += `
-      <div class="review-q-item">
-        <div class="review-q-header">
-          <span>${q.name}</span>
-          ${badge}
-        </div>
-        <div class="review-q-body">
-          <pre class="review-q-code"><code>${escapeHtml(code)}</code></pre>
-        </div>
-      </div>
-    `;
-  });
-  listArea.innerHTML = html;
-  
-  modal.style.display = 'flex';
+  if (modal) modal.style.display = 'flex';
 };
 
 window.closeExamReview = function() {
@@ -1347,171 +956,9 @@ window.closeExamReview = function() {
   if (modal) modal.style.display = 'none';
 };
 
-// Envio final para o professor via EmailJS com fallback mailto
 window.submitExamFinal = function() {
-  const d1 = STATE.progress.examName1 || "";
-  const d2 = STATE.progress.examName2 || "";
-  const studentNames = `${d1} ${d2 ? ' e ' + d2 : ''}`;
-  const subject = `Prova HTML/CSS - ${studentNames}`;
-  const reportText = generateExamReportString();
-  
-  closeExamReview();
-  
-  // API Payload conforme o checklist
-  const payload = {
-    service_id: "service_9u2sac8",
-    template_id: "template_yew74so",
-    user_id: "krM3uc38ucTfqux-q",
-    template_params: {
-      subject: subject,
-      from_name: studentNames,
-      message: reportText,
-      // Fallbacks redundantes para evitar destinatário vazio
-      to_email: "euclidespaim@gmail.com",
-      email: "euclidespaim@gmail.com",
-      from_email: "euclidespaim@gmail.com",
-      reply_to: "euclidespaim@gmail.com",
-      name: studentNames,
-      title: subject
-    }
-  };
-
-  fetch('https://api.emailjs.com/api/v1.0/email/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => {
-    if (res.ok) {
-      alert("Avaliação entregue via EmailJS com sucesso! 🎉");
-      onExamSubmittedSuccessfully();
-    } else {
-      throw new Error("Erro no servidor");
-    }
-  })
-  .catch(err => {
-    alert("Falha no EmailJS. Tentando fallback local (mailto)...");
-    window.open(`mailto:euclidespaim@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportText)}`, '_blank');
-    onExamSubmittedSuccessfully();
-  });
-};
-
-function onExamSubmittedSuccessfully() {
   STATE.progress.examSubmitted = true;
   saveProgress();
+  closeExamReview();
   refreshExamUI();
-}
-
-function generateExamReportString() {
-  const d1 = STATE.progress.examName1 || "";
-  const d2 = STATE.progress.examName2 || "";
-  const studentNames = `${d1} ${d2 ? ' e ' + d2 : ''}`;
-  
-  let qReport = "";
-  let totalCorrect = 0;
-  SITE_DATA.exam.forEach(q => {
-    const code = STATE.progress.examCodes[q.id] || q.starterCode;
-    const isCorrect = STATE.progress.examResults[q.id] === true;
-    if (isCorrect) totalCorrect++;
-    
-    qReport += `=========================================\n`;
-    qReport += `${q.name}\n`;
-    qReport += `Status: ${isCorrect ? 'APROVADO nos testes DOM' : 'REPROVADO nos testes DOM'}\n`;
-    qReport += `Código Enviado:\n\n${code}\n\n`;
-  });
-  
-  return `RELATÓRIO DA AVALIAÇÃO DE DESENVOLVIMENTO WEB (HTML/CSS)
-Data de Conclusão: ${new Date().toLocaleString('pt-BR')}
-Integrantes da Dupla: ${studentNames}
-
-Pontuação Automática: ${totalCorrect} de 3 questões resolvidas corretas.
-
-Códigos das Questões:
-${qReport}
-=========================================
-FIM DO RELATÓRIO.`;
-}
-
-// Outros comandos auxiliares pós-envio
-window.copyExamReportToClipboard = function() {
-  const text = document.getElementById('exam-report-text-copy')?.value || "";
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      const copyBtn = document.getElementById('exam-copy-btn');
-      if (copyBtn) {
-        copyBtn.innerText = "Copiado! ✓";
-        setTimeout(() => copyBtn.innerText = "Copiar Relatório 📋", 2000);
-      }
-    })
-    .catch(err => alert("Falha ao copiar: " + err));
-};
-
-window.downloadExamReportAsTxt = function() {
-  const text = document.getElementById('exam-report-text-copy')?.value || "";
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  
-  const d1 = STATE.progress.examName1 || "aluno";
-  const safeName = d1.toLowerCase().replace(/[^a-z0-9]/g, "_");
-  link.download = `avaliacao_html_css_${safeName}.txt`;
-  
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
-window.resetSubmittedExam = async function() {
-  const pwd = prompt("Digite a senha do professor para DESBLOQUEAR A PROVA:");
-  if (pwd === null) return;
-  
-  const hash = await sha256(pwd.trim());
-  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3"; // Hash de liberação/reset da avaliação
-  
-  if (hash === expectedHash) {
-    STATE.progress.examSubmitted = false;
-    saveProgress();
-    refreshExamUI();
-    alert("Prova liberada para novas edições e reenvio!");
-  } else {
-    alert("Senha incorreta!");
-  }
-};
-
-window.resetEntireExam = async function() {
-  const pwd = prompt("Digite a senha do professor para RESETAR A PROVA COMPLETAMENTE:");
-  if (pwd === null) return;
-  
-  const hash = await sha256(pwd.trim());
-  const expectedHash = "4b4b86eaad7940281b2e662e9fc016d8b381ee0ceef3f7601c2114a47c2808c3"; // Hash de liberação/reset da avaliação
-  
-  if (hash === expectedHash) {
-    STATE.progress.examSubmitted = false;
-    STATE.progress.examUnlocked = false;
-    STATE.progress.examName1 = "";
-    STATE.progress.examName2 = "";
-    STATE.progress.examCodes = {};
-    STATE.progress.examResults = {};
-    saveProgress();
-    
-    // limpa textarea do auth
-    const pwdInput = document.getElementById('exam-password-input');
-    if (pwdInput) pwdInput.value = "";
-    
-    location.reload();
-  } else {
-    alert("Senha incorreta!");
-  }
-};
-
-window.retryMailtoSubmit = function() {
-  const d1 = STATE.progress.examName1 || "";
-  const d2 = STATE.progress.examName2 || "";
-  const studentNames = `${d1} ${d2 ? ' e ' + d2 : ''}`;
-  const subject = `Prova HTML/CSS - ${studentNames}`;
-  const reportText = generateExamReportString();
-  
-  window.open(`mailto:euclidespaim@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportText)}`, '_blank');
 };

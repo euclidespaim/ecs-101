@@ -403,8 +403,13 @@ function renderTheoryFlowchart(conceptId) {
             <div class="flow-arrow active"></div>
             <div class="flow-node active" style="border-color: var(--color-success)">Pega próximo item<br>Executa bloco indentado</div>
             <div style="width: 2px; height: 30px; background-color: var(--accent-teal); margin: 0 auto;"></div>
-            <div style="border-top: 2px dashed var(--accent-teal); border-left: 2px dashed var(--accent-teal); width: 120px; height: 130px; position: absolute; left: -100px; top: 120px; border-top-left-radius: 10px;"></div>
-            <div style="position: absolute; left: 15px; top: 110px; font-size: 0.8rem; color: var(--accent-teal); font-weight: bold;">VOLTA AO INÍCIO</div>
+            <!-- Linha de loop que conecta de volta ao losango de decisão -->
+            <div style="border-top: 2px dashed var(--accent-teal); border-left: 2px dashed var(--accent-teal); border-bottom: 2px dashed var(--accent-teal); width: 105px; height: 175px; position: absolute; left: -100px; top: -95px; border-top-left-radius: 10px; border-bottom-left-radius: 10px;">
+              <!-- Seta indicando o retorno -->
+              <div style="position: absolute; right: 0; top: -5px; border-left: 6px solid var(--accent-teal); border-top: 4px solid transparent; border-bottom: 4px solid transparent;"></div>
+              <!-- Rótulo explicativo sobre a linha -->
+              <div style="position: absolute; left: 15px; top: 75px; font-size: 0.75rem; color: var(--accent-teal); font-weight: bold; background-color: #F8FAFC; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--accent-teal); white-space: nowrap;">VOLTA AO INÍCIO</div>
+            </div>
           </div>
           <div class="flow-branch">
             <span class="branch-label no">NÃO</span>
