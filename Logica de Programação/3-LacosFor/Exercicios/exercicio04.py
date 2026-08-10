@@ -7,3 +7,8 @@
 # 
 # 4. Fora do laço, ao final do programa, exiba a mensagem: 
 # "Decolar!".
+
+for x in range(5):
+    print(5- x)
+
+print("Decolar 🚀")
