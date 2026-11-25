@@ -1,0 +1,5 @@
+# Bancos SQLite gerados nas aulas de Banco de Dados
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
