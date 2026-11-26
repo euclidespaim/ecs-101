@@ -22,3 +22,11 @@ Para pensar: a função foi escrita uma vez só, mas
 calculou três médias diferentes. Quem decide quais
 notas ela usa em cada chamada?
 """
+
+def boletim(nome, nota1, nota2):
+   media = (nota1 + nota2) / 2
+   print("O aluno: ", nome , 
+   "ficou com: " , media , "na média.")
+
+boletim("Ana", 8, 10)
+boletim("Isaque", 6, 5)
